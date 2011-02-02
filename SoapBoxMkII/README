@@ -1,2 +1,9 @@
 This is the place for all the files that implement the SoapBox Mark II proof-of-concept controller.
 Everything here is copied into the on-board controller of the Trike.
+
+Files and their function:
+- "interfaces" corresponds to the /etc/network/interfaces linux configuration file. You can link or copy it there.
+- "soapbox.sh" is a SysV init script that launches and kills the controller application once it is installed in /etc/init.d/ and links produced with "update-rc.d soapbox.sh defaults".
+- "sb2.py": the control application itself, to be placed in /home/root/.
+- "sb2_*.py": the custom modules necessary to the main application, also going into /home/root/.
+
