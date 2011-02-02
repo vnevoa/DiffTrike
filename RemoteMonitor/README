@@ -1,0 +1,3 @@
+This is the place for the files that live in the remote monitoring station.
+They implement one or more client applications that connect to the Trike controller
+to help monitor and debug and control the Trike's behaviour.
