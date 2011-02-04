@@ -1,5 +1,5 @@
 This is the place for all the files that implement the SoapBox Mark II proof-of-concept controller.
-Everything here is copied into the on-board controller of the Trike.
+Everything here is copied into the on-board controller of the Trike. Currently the chosen Hardware for this controller is the motherboard of an Openmoko GTA02 issue A6, a.k.a. "Neo Freerunner". http://wiki.openmoko.org/wiki/Neo_FreeRunner_Hardware
 
 The GNU/Linux distribution used as a basis for this controller is "SHR-unstable" because it is the most alive one in the Openmoko community at the moment of this project's inception.
 You can download the latest flashable images from http://shr.bearstech.com/shr-unstable/images/om-gta02/ and flash them onto the phone by following these instructions: http://wiki.openmoko.org/wiki/SHR_User_Manual#Installation_on_Flash
