@@ -27,21 +27,29 @@ import sys, os, math, pygame, thread, socket, struct
 from pygame.locals import * 
 from pygame.gfxdraw import *
 from pygame.joystick import *
+from pygame.font import *
 
 class Window():
     """establishes the program window"""
     def __init__(self):
-        self.width = 500
-        self.height = 300
         self.color = (10, 10, 10)
-        pygame.display.set_mode((self.width, self.height)) 
-        pygame.display.set_caption('Joystick GUI')
-        #pygame.mouse.set_visible(0)
+        pygame.display.set_mode((0,0), pygame.FULLSCREEN) 
+        pygame.display.set_caption('SoapBox Mark II Control GUI')
+        pygame.mouse.set_visible(0)
         self.sf = pygame.display.get_surface()
+        self.width, self.height = self.sf.get_size()
         self.sf.fill(self.color)
+	self.font = pygame.font.SysFont("", 24)
+
+    def write(self, text, x, y):
+        self.txt = self.font.render(text, 0, (255,255,255), (0,0,0))
+	self.txt_x = x
+	self.txt_y = y
 
     def redraw(self):
-        self.sf.blit( self.sf, (0,0) )
+	self.sf.fill(self.color)
+	self.sf.blit(self.txt, (self.txt_x, self.txt_y))
+        #self.sf.blit(self.sf, (0,0))
 
 class Sights():
     """draws the targeting sights"""
@@ -105,6 +113,7 @@ class Telemetry():
 	"""gets data from the remote board."""
 	def __init__(self, host, port):
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		self.sock.settimeout(2.0)
 		self.X = self.Y = 0
 		try:
 			self.sock.connect((host, port))
@@ -152,8 +161,8 @@ tele = Telemetry("192.168.5.202", 11000)
 
 # event loop:
 while True: 
-    # wait 1/60 seconds
-    clock.tick(60)
+    # wait 1/x seconds
+    clock.tick(25)
 
     # collect input:
     input(pygame.event.get())
@@ -176,8 +185,9 @@ while True:
     cross.y = bg.height/2 + ( frame.size/2 * Y )
 
     # update screen:
+    bg.write("X="+str(int(cross.x))+" Y="+str(int(cross.y)), cross.x+10, cross.y+10)
+    bg.redraw()
     frame.draw(bg)
     cross.draw(bg)
-    bg.redraw()
     pygame.display.flip()
 
