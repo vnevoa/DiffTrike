@@ -108,16 +108,23 @@ o.left = o.right = 0
 t = sb2_telemetry.MyTcpServer()
 t.start("192.168.5.202", 11000, getstruct)
 
+# start loop timer (50ms+-10ms)
+pygame.time.set_timer(pygame.USEREVENT, 50)
+
 t1 = time.time()
 print "Init=%0.3fs. Entering control loop." % (t0 - t1)
 
 # enter control loop
 while ongoing:
 
+	# block until timer interval
+	event = pygame.event.wait()
+	if event.type != pygame.USEREVENT:
+		continue
+
 	t0 = time.time()
 
 	# read inputs
-	pygame.event.get()
 	i.jsX, i.jsY = stick.getXY()
 	#io.jsB1, io.jsB2 = stick.getButtons()
 	t1 = time.time()
@@ -150,7 +157,7 @@ while ongoing:
 	if sync.locked() : sync.release()
 
 	# lay off the cpu for a little
-	time.sleep(0.05)
+	#time.sleep(0.05)
 
 # exited control loop, clean up
 
