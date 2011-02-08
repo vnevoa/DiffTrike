@@ -29,6 +29,13 @@ from pygame.gfxdraw import *
 from pygame.joystick import *
 from pygame.font import *
 
+class Text():
+	def __init__(self, txt, x, y):
+		self.font = pygame.font.SysFont("", 24)
+		self.sf = self.font.render(txt, 0, (255,255,255), (0,0,0))
+		self.x = x
+		self.y = y
+
 class Window():
 	"""establishes the program window"""
 	def __init__(self):
@@ -39,16 +46,18 @@ class Window():
 		self.sf = pygame.display.get_surface()
 		self.width, self.height = self.sf.get_size()
 		self.sf.fill(self.color)
-		self.font = pygame.font.SysFont("", 24)
+		self.txt = []
 
 	def write(self, text, x, y):
-		self.txt = self.font.render(text, 0, (255,255,255), (0,0,0))
-		self.txt_x = x
-		self.txt_y = y
+		txt = Text(text, x, y)
+		self.txt.append(txt)
+		return txt.sf.get_size()
 
 	def redraw(self):
 		self.sf.fill(self.color)
-		self.sf.blit(self.txt, (self.txt_x, self.txt_y))
+		while (len(self.txt)):
+			txt = self.txt.pop()
+			self.sf.blit(txt.sf, (txt.x, txt.y))
 
 class Sights():
 	"""draws the targeting sights"""
@@ -113,6 +122,8 @@ class Telemetry():
 	def __init__(self, host, port):
 		self.host = host
 		self.port = port
+		self.connected = 0
+		self.fresh = 0
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.sock.settimeout(3.0)
 		self.a = 0
@@ -129,6 +140,7 @@ class Telemetry():
 				while True:
 					received = self.sock.recv(28)
 					(self.t_in, self.t_proc, self.t_out, self.X, self.Y, self.right, self.left) = struct.unpack('fffffff', received)
+					self.fresh = 1
 			except:
 				self.connected = 0
 
@@ -153,53 +165,52 @@ class Telemetry():
 			self.left = self.Y * 100
 		return (self.right, self.left)
     
-def input(events): 
-	for event in events: 
-		if event.type == QUIT: 
-			sys.exit(0) 
-		if event.type == pygame.KEYDOWN:
-			if event.key == pygame.K_ESCAPE or event.unicode == 'q':
-				sys.exit(0)
-		#else: 
-			#print event 
-
 
 # initialization routine:
 pygame.init()
 bg = Window()
 frame = Sights()
-frame.draw(bg)
 cross = Crosshair()
-cross.draw(bg)
 clock = pygame.time.Clock()
 stick = Joystick()
 tele = Telemetry("192.168.5.202", 11000)
 
 # event loop:
 while True: 
+
     # wait 1/x seconds
-    clock.tick(25)
+	clock.tick(20)
 
     # collect input:
-    input(pygame.event.get())
-
-    # delete mobile objects:
-    cross.delete(bg)
+	events = pygame.event.get()
+	if stick.present:
+		X, Y = stick.getXY()
+	else:
+		X, Y = tele.getXY()
+	(ti, tp, to) = tele.getTimes()
 
     # process it:
-    if stick.present:
-        X, Y = stick.getXY()
-    else:
-	X, Y = tele.getXY()
-    cross.x = bg.width/2 + ( frame.size/2 * X )
-    cross.y = bg.height/2 + ( frame.size/2 * Y )
+	for event in events: 
+		if event.type == QUIT: 
+			sys.exit(0) 
+		if event.type == pygame.KEYDOWN:
+			if event.key == pygame.K_ESCAPE or event.unicode == 'q':
+				sys.exit(0)
+	cross.x = bg.width/2 + ( frame.size/2 * X )
+	cross.y = bg.height/2 + ( frame.size/2 * Y )
 
     # update screen:
-    bg.write("X=%0.3f Y=%0.3f" % (X, Y), cross.x+10, cross.y+10)
-    bg.write("in=%0.3f pr=%0.3f o=%0.3f" % tele.getTimes(), cross.x+10, cross.y+10)
-    bg.redraw()
-    frame.draw(bg)
-    cross.draw(bg)
-    pygame.display.flip()
+	(hs, vs) = bg.write("connected = %d, fresh = %d" % (tele.connected, tele.fresh), 10, 10)
+	if tele.fresh:
+		bg.write("X=%0.3f Y=%0.3f" % (X, Y), cross.x+10, cross.y+10)
+		bg.write("input = %0.1f ms" % (1000*ti), 10, 10+vs)
+		bg.write("proc = %0.1f ms" % (1000*tp), 10, 10+vs*2)
+		bg.write("output = %0.1f ms" % (1000*to), 10, 10+vs*3)
+		bg.write("total = %0.1f ms" % (1000*(ti+tp+to)), 10, 10+vs*4)
+	tele.fresh = 0
+	bg.redraw()
+	frame.draw(bg)
+	cross.draw(bg)
+	pygame.display.flip()
 
 # the end
