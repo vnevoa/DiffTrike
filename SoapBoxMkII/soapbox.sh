@@ -28,7 +28,7 @@ case "$1" in
 
 	# launch control application:
 	export SDL_JOYSTICK_DEVICE=/dev/input/js2
-	start-stop-daemon -S -x $APP > /dev/null &
+	start-stop-daemon -N -10 -S -x $APP > /dev/null &
         echo "done."
 
 	;;

@@ -109,18 +109,19 @@ t = sb2_telemetry.MyTcpServer()
 t.start("192.168.5.202", 11000, getstruct)
 
 # start loop timer (50ms+-10ms)
-pygame.time.set_timer(pygame.USEREVENT, 50)
+#pygame.time.set_timer(pygame.USEREVENT, 50)
 
 t1 = time.time()
-print "Init=%0.3fs. Entering control loop." % (t0 - t1)
+print "Init=%0.3fs. Entering control loop." % (t1 - t0)
 
 # enter control loop
 while ongoing:
 
+	pygame.event.pump()
 	# block until timer interval
-	event = pygame.event.wait()
-	if event.type != pygame.USEREVENT:
-		continue
+	#event = pygame.event.wait()
+	#if event.type != pygame.USEREVENT:
+	#	continue
 
 	t0 = time.time()
 
@@ -157,7 +158,7 @@ while ongoing:
 	if sync.locked() : sync.release()
 
 	# lay off the cpu for a little
-	#time.sleep(0.05)
+	time.sleep(0.040)
 
 # exited control loop, clean up
 

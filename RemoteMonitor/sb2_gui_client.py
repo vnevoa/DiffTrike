@@ -202,7 +202,7 @@ while True:
     # update screen:
 	(hs, vs) = bg.write("connected = %d, fresh = %d" % (tele.connected, tele.fresh), 10, 10)
 	if tele.fresh:
-		bg.write("X=%0.3f Y=%0.3f" % (X, Y), cross.x+10, cross.y+10)
+		bg.write("X=%0.2f Y=%0.2f" % (X, Y), cross.x+10, cross.y+10)
 		bg.write("input = %0.1f ms" % (1000*ti), 10, 10+vs)
 		bg.write("proc = %0.1f ms" % (1000*tp), 10, 10+vs*2)
 		bg.write("output = %0.1f ms" % (1000*to), 10, 10+vs*3)
