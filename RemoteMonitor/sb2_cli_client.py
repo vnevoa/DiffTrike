@@ -40,11 +40,11 @@ sock.connect((HOST, PORT))
 i = 0
 t_1 = time.time()
 while 1 : #i < 50:
-	received = sock.recv(28)
-	(t_in, t_proc, t_out, X, Y, right, left) = struct.unpack('fffffff', received)
+	received = sock.recv(32)
+	(t_in, t_proc, t_out, X, Y, right, left, t_cycl) = struct.unpack('ffffffff', received)
 	t = time.time()
-	print "T:%0.3f: L:%d I:%0.3f P:%0.3f O:%0.3f X:%0.3f Y:%0.3f R:%0.3f L:%0.3f" % \
-	( (t - t_1), len(received), t_in, t_proc, t_out, X, Y, right, left )
+	print "T:%0.3f: L:%d C:%0.3f I:%0.3f P:%0.3f O:%0.3f X:%0.3f Y:%0.3f R:%0.3f L:%0.3f" % \
+	( (t - t_1), len(received), t_cycl, t_in, t_proc, t_out, X, Y, right, left )
 	t_1 = t
 	i+=1
 sock.close()
