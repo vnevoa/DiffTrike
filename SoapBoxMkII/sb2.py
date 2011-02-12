@@ -47,11 +47,12 @@ class inputData():
 
 class outputData():
 	def __init__(self):
-		left = 0
-		right = 0
+		l_trq = 0
+		r_trq = 0
 		t_in = 0
 		t_proc = 0
 		t_out = 0
+		t_cycl = 0
 
 
 #### local functions ####
@@ -64,7 +65,7 @@ def handler(signum, frame):
 # callback for the telemetry server
 def getstruct():
         sync.acquire()
-        return struct.pack("fffffff", o.t_in, o.t_proc, o.t_out, i.jsX, i.jsY, o.right, o.left)
+        return struct.pack("ffffffff", o.t_in, o.t_proc, o.t_out, i.jsX, i.jsY, o.r_trq, o.l_trq, o.t_cycl)
 
 
 #### main program ####
@@ -102,7 +103,7 @@ stick = sb2_joystick.Joystick()
 i.jsX = i.jsY = 0
 
 # initialize output objects
-o.left = o.right = 0
+o.l_trq = o.r_trq = 0
 
 # initialize telemetry
 t = sb2_telemetry.MyTcpServer()
@@ -112,9 +113,10 @@ t.start("192.168.5.202", 11000, getstruct)
 #pygame.time.set_timer(pygame.USEREVENT, 50)
 
 t1 = time.time()
-print "Init=%0.3fs. Entering control loop." % (t1 - t0)
+print "Init=%0.3fs. Entering control loop." % (t0 - t1)
 
 # enter control loop
+t_1 = t1
 while ongoing:
 
 	pygame.event.pump()
@@ -134,18 +136,18 @@ while ongoing:
 	# none yet
 
 	# process data
-	o.left  = -i.jsY - i.jsX
-	o.right = -i.jsY + i.jsX
-	o.left = min(o.left, 1)
-	o.left = max(o.left, 0)
-	o.right = min(o.right, 1)
-	o.right = max(o.right, 0)
+	o.r_trq  = -i.jsY - i.jsX
+	o.r_trq = min(o.r_trq, 1)
+	o.r_trq = max(o.r_trq, -1)
+	o.l_trq = -i.jsY + i.jsX
+	o.l_trq = min(o.l_trq, 1)
+	o.l_trq = max(o.l_trq, -1)
 	toggle ^= 1
 	t2 = time.time()
 
 	# write outputs
-	orange.write(str(int(o.left*255.0)))
-	blue.write(str(int(o.right*255.0)))
+	orange.write(str(int(max(0, o.l_trq*255.0))))
+	blue.write(str(int(max(0, o.r_trq*255.0))))
 	red.write(str(int(toggle)*255))
 	t3 = time.time()
 
@@ -153,12 +155,14 @@ while ongoing:
 	o.t_in   = (t1 - t0)
 	o.t_proc = (t2 - t1)
 	o.t_out  = (t3 - t2)
+	o.t_cycl = (t0 - t_1)
+	t_1 = t0
 
 	# allow other threads to work
 	if sync.locked() : sync.release()
 
 	# lay off the cpu for a little
-	time.sleep(0.040)
+	time.sleep(0.020)
 
 # exited control loop, clean up
 
