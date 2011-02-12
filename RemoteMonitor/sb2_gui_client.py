@@ -23,23 +23,23 @@
 # controller in real time. It requires PyGame.
 #
 
-import sys, os, math, pygame, thread, socket, struct
+import sys, os, math, pygame, thread, socket, struct, time
 from pygame.locals import * 
 from pygame.gfxdraw import *
 from pygame.joystick import *
 from pygame.font import *
 
 class Text():
-	def __init__(self, txt, x, y):
+	def __init__(self, txt, x, y, fcolor=(255,255,255), bcolor=(0,0,0)):
 		self.font = pygame.font.SysFont("", 24)
-		self.sf = self.font.render(txt, 0, (255,255,255), (0,0,0))
+		self.sf = self.font.render(txt, 0, fcolor, bcolor)
 		self.x = x
 		self.y = y
 
 class Window():
-	"""establishes the program window"""
-	def __init__(self):
-		self.color = (10, 10, 10)
+	"""main window behaviour"""
+	def __init__(self, fillcolor=(0, 0, 0)):
+		self.color = fillcolor
 		pygame.display.set_mode((0,0), pygame.FULLSCREEN) 
 		pygame.display.set_caption('SoapBox Mark II Control GUI')
 		pygame.mouse.set_visible(0)
@@ -51,7 +51,8 @@ class Window():
 	def write(self, text, x, y):
 		txt = Text(text, x, y)
 		self.txt.append(txt)
-		return txt.sf.get_size()
+		(h, v) = txt.sf.get_size()
+		return (x + h, y + v)
 
 	def redraw(self):
 		self.sf.fill(self.color)
@@ -61,9 +62,9 @@ class Window():
 
 class Sights():
 	"""draws the targeting sights"""
-	def __init__(self):
-		self.color = (255,0,0)
-		self.size = 250
+	def __init__(self, size=250, color=(255,0,0)):
+		self.color = color
+		self.size = size
 
 	def draw(self, bg):
 		p1 = ( (bg.width - self.size)/2, (bg.height - self.size)/2 )
@@ -82,10 +83,10 @@ class Sights():
 		pygame.draw.line( bg.sf, self.color, p7, p8 )
 
 class Crosshair():
-	"""draws the targeting crosshair"""
-	def __init__(self):
-		self.color = (0,255,0)
-		self.size = 25
+	"""draws a targeting crosshair"""
+	def __init__(self, size=25, color=(0,255,0)):
+		self.color = color
+		self.size = size
 		self.x = 250
 		self.y = 150
 
@@ -102,6 +103,22 @@ class Crosshair():
 		self.color = bg.color
 		self.draw(bg)
 		self.color = prev
+
+class Bargraph():
+	"""draws a bar graph"""
+	def __init__(self, bg, place, size=(20,250), color=(0,128,0)):
+		self.bg = bg
+		self.size = size
+		self.place = place
+		self.color = color
+
+	def draw(self, fillfactor):
+		# erase the whole area:
+		pygame.draw.rect( bg.sf, bg.color, (self.place[0], self.place[1], self.size[0], self.size[1]), 0)
+		# draw the border:
+		pygame.draw.rect( bg.sf, self.color, (self.place[0], self.place[1], self.size[0], self.size[1]), 1)
+		# draw the filling:
+		pygame.draw.rect( bg.sf, self.color, (self.place[0], self.place[1]+(1-fillfactor)*self.size[1], self.size[0], fillfactor*self.size[1]), 0)
 
 class Joystick():
 	"""gets data from the joystick"""
@@ -127,9 +144,11 @@ class Telemetry():
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.sock.settimeout(3.0)
 		self.a = 0
-		self.t_in = self.t_proc = self.t_out = 0
+		self.t_in = self.t_proc = self.t_out = self.t_cycl = 0
 		self.X = self.Y = 0
-		self.right = self.left = 0
+		self.r_trq = self.l_trq = 0
+		self.t = time.time()
+		self.blackout_histo = Histogram()
 		thread.start_new_thread(self.receive, ())
 
 	def receive(self):
@@ -138,48 +157,63 @@ class Telemetry():
 				self.sock.connect((self.host, self.port))
 				self.connected = 1
 				while True:
-					received = self.sock.recv(28)
-					(self.t_in, self.t_proc, self.t_out, self.X, self.Y, self.right, self.left) = struct.unpack('fffffff', received)
+					received = self.sock.recv(32)
+					self.t_1 = self.t
+					self.t = time.time()
+					self.blackout_histo.inc(int(1000 * (self.t - self.t_1)))
+					(self.t_in, self.t_proc, self.t_out, self.X, self.Y, self.r_trq, self.l_trq, self.t_cycl) = struct.unpack('ffffffff', received)
 					self.fresh = 1
 			except:
 				self.connected = 0
+				self.sock.close()
 
 	def getXY(self):
-		if not self.connected:
-			self.a += 2*math.pi/360
-			self.a %= 2*math.pi
-			self.X = math.cos(self.a)
-			self.Y = math.sin(self.a)
 		return (self.X, self.Y)
 
-	def getTimes(self):
-		if not self.connected:
-			self.t_in = abs(self.X) * 1000
-			self.t_out = abs(self.Y) * 1000
-			self.t_proc = abs(self.X * self.Y) * 1000
-		return (self.t_in, self.t_proc, self.t_out)
-
 	def getWheels(self):
-		if not self.connected:
-			self.right = self.X * 100
-			self.left = self.Y * 100
-		return (self.right, self.left)
+		return (self.r_trq, self.l_trq)
     
+	def getTimes(self):
+		self.fresh = 0
+		return (self.t_in, self.t_proc, self.t_out, self.t_cycl)
+
+
+class Histogram():
+	"""holds event frequency data."""
+	def __init__(self):
+		self.data = dict()
+
+	def inc(self, key):
+		if key not in self.data:
+			self.data[key] = 1
+		else:
+			self.data[key] = self.data[key] + 1
+
+	def getall(self):
+		ks = self.data.keys()
+		ks.sort(None, None, True)
+		return ((k, self.data[k]) for k in ks)
+
 
 # initialization routine:
 pygame.init()
 bg = Window()
 frame = Sights()
 cross = Crosshair()
+left_torque_graph = Bargraph(bg, (bg.width/2 - frame.size/2 - 100, bg.height/2 - frame.size/2))
+right_torque_graph = Bargraph(bg, (bg.width/2 + frame.size/2 + 75, bg.height/2 - frame.size/2))
 clock = pygame.time.Clock()
 stick = Joystick()
 tele = Telemetry("192.168.5.202", 11000)
+timer_histo = Histogram()
+input_histo = Histogram()
+proc_histo = Histogram()
+output_histo = Histogram()
+total_histo = Histogram()
+histo_show = False
 
 # event loop:
 while True: 
-
-    # wait 1/x seconds
-	clock.tick(20)
 
     # collect input:
 	events = pygame.event.get()
@@ -187,30 +221,74 @@ while True:
 		X, Y = stick.getXY()
 	else:
 		X, Y = tele.getXY()
-	(ti, tp, to) = tele.getTimes()
+	fresh_data = tele.fresh
+	(ti, tp, to, tc) = tele.getTimes()
 
     # process it:
-	for event in events: 
+	for event in events:
 		if event.type == QUIT: 
 			sys.exit(0) 
 		if event.type == pygame.KEYDOWN:
 			if event.key == pygame.K_ESCAPE or event.unicode == 'q':
 				sys.exit(0)
+			if event.unicode == 'h':
+				histo_show = not histo_show
+
 	cross.x = bg.width/2 + ( frame.size/2 * X )
 	cross.y = bg.height/2 + ( frame.size/2 * Y )
 
+	if fresh_data:
+		input_histo.inc("%0.1f" % (1000 * ti))
+		proc_histo.inc("%0.1f" % (1000 * tp))
+		output_histo.inc("%0.1f" % (1000 * to))
+		timer_histo.inc("%0.1f" % (1000 * tc))
+		total_histo.inc("%0.1f" % (1000 * (ti+tp+to)))
+
     # update screen:
-	(hs, vs) = bg.write("connected = %d, fresh = %d" % (tele.connected, tele.fresh), 10, 10)
-	if tele.fresh:
-		bg.write("X=%0.2f Y=%0.2f" % (X, Y), cross.x+10, cross.y+10)
-		bg.write("input = %0.1f ms" % (1000*ti), 10, 10+vs)
-		bg.write("proc = %0.1f ms" % (1000*tp), 10, 10+vs*2)
-		bg.write("output = %0.1f ms" % (1000*to), 10, 10+vs*3)
-		bg.write("total = %0.1f ms" % (1000*(ti+tp+to)), 10, 10+vs*4)
-	tele.fresh = 0
+
+	(hs, vs1) = bg.write("connected = %d" % tele.connected, 10, 10)
+
+	if histo_show:
+
+		(hs1, vs) = bg.write("blackout histogram:", 10, 10+vs1)
+		for t in tele.blackout_histo.getall():
+			(hs, vs) = bg.write("   %sms : %d" % (t[0], t[1]), 10, 5+vs)
+	
+		if tele.connected:
+
+			(hs2, vs) = bg.write("loop timer histogram:", hs1+10, 10+vs1)
+			for t in timer_histo.getall():
+				(hs, vs) = bg.write("   %sms : %d" % (t[0], t[1]), hs1+10, 5+vs)
+
+			(hs3, vs) = bg.write("input histogram:", hs2+10, 10+vs1)
+			for t in input_histo.getall():
+				(hs, vs) = bg.write("   %sms : %d" % (t[0], t[1]), hs2+10, 5+vs)
+
+			(hs4, vs) = bg.write("processing histogram:", hs3+10, 10+vs1)
+			for t in proc_histo.getall():
+				(hs, vs) = bg.write("   %sms : %d" % (t[0], t[1]), hs3+10, 5+vs)
+
+			(hs5, vs) = bg.write("output histogram:", hs4+10, 10+vs1)
+			for t in output_histo.getall():
+				(hs, vs) = bg.write("   %sms : %d" % (t[0], t[1]), hs4+10, 5+vs)
+
+			(hs6, vs) = bg.write("total histogram:", hs5+10, 10+vs1)
+			for t in total_histo.getall():
+				(hs, vs) = bg.write("   %sms : %d" % (t[0], t[1]), hs5+10, 5+vs)
+
+	bg.write("X=%0.2f Y=%0.2f" % (X, Y), cross.x+10, cross.y+10)
+
 	bg.redraw()
 	frame.draw(bg)
 	cross.draw(bg)
+	left_torque_graph.draw(0.5+tele.l_trq/2)
+	right_torque_graph.draw(0.5+tele.r_trq/2)
 	pygame.display.flip()
+
+	# wait 1/x seconds
+	if fresh_data:
+		clock.tick(25)
+	else:
+		clock.tick(100)
 
 # the end
