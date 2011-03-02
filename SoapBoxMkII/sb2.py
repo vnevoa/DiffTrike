@@ -26,7 +26,7 @@
 
 import os, sys, signal, time, thread
 import struct, math
-import sb2_joystick, sb2_telemetry
+import sb2_joystick, sb2_telemetry, sb2_motor
 import pygame
 
 
@@ -34,25 +34,25 @@ import pygame
 
 class inputData():
 	def __init__(self):
-		jsX = 0
-		jsY = 0
-		jsB1 = 0
-		jsB2 = 0
-		jsHatX = 0
-		jsHatY = 0
-		acBotX = 0
-		acBotY = 0
-		acTopX = 0
-		acTopY = 0
+		jsX = 0 # Joystick X coordenate.
+		jsY = 0 # Joystick Y coordenate.
+		jsB1 = 0 # Joystick Button 1 state.
+		jsB2 = 0 # Joystick Button 2 state.
+		jsHatX = 0 # Joystick Hat X state.
+		jsHatY = 0 # Joystick Hat Y state.
+		acBotX = 0 # Bottom Accelerator X state.
+		acBotY = 0 # Bottom Accelerator Y state.
+		acTopX = 0 # Top Accelerator X state.
+		acTopY = 0 # Top Accelerator Y state.
 
 class outputData():
 	def __init__(self):
-		l_trq = 0
-		r_trq = 0
-		t_in = 0
-		t_proc = 0
-		t_out = 0
-		t_cycl = 0
+		l_trq = 0 # Left wheel desired torque.
+		r_trq = 0 # Right wheel desired torque.
+		t_in = 0  # Time taken during inputs.
+		t_proc = 0 # Time taken during processing.
+		t_out = 0  # Time taken during outputs.
+		t_cycl = 0 # Period of loop cycle.
 
 
 #### local functions ####
@@ -75,8 +75,8 @@ t0 = time.time()
 i = inputData()
 o = outputData()
 sync = thread.allocate_lock()
-orange = open('/sys/devices/platform/leds_pwm/leds/gta02:orange:power/brightness','w', 0)
-blue = open('/sys/devices/platform/leds_pwm/leds/gta02:blue:power/brightness','w', 0)
+leftM = sb2_motor.I2CMotorBridge('/sys/devices/platform/leds_pwm/leds/gta02:orange:power/brightness')
+rightM = sb2_motor.I2CMotorBridge('/sys/devices/platform/leds_pwm/leds/gta02:blue:power/brightness')
 red = open('/sys/devices/platform/leds-gpio/leds/gta02:red:aux/brightness', 'w', 0)
 ongoing = 1
 
@@ -87,12 +87,12 @@ signal.signal(signal.SIGINT, handler)
 # perform lights test
 toggle = 0
 red.write("255")
-blue.write("255")
-orange.write("255")
+rightM.setTorque(1)
+leftM.setTorque(1)
 time.sleep(1)
 red.write("0")
-blue.write("0")
-orange.write("0")
+rightM.setTorque(0)
+leftM.setTorque(0)
 
 # block other threads
 sync.acquire()
@@ -113,7 +113,7 @@ t.start("192.168.5.202", 11000, getstruct)
 #pygame.time.set_timer(pygame.USEREVENT, 50)
 
 t1 = time.time()
-print "Init=%0.3fs. Entering control loop." % (t0 - t1)
+print "Init=%0.3fs. Entering control loop." % (t1 - t0)
 
 # enter control loop
 t_1 = t1
@@ -146,8 +146,8 @@ while ongoing:
 	t2 = time.time()
 
 	# write outputs
-	orange.write(str(int(max(0, o.l_trq*255.0))))
-	blue.write(str(int(max(0, o.r_trq*255.0))))
+	leftM.setTorque(max(0, o.l_trq))
+	rightM.setTorque(max(0, o.r_trq))
 	red.write(str(int(toggle)*255))
 	t3 = time.time()
 
@@ -170,10 +170,8 @@ while ongoing:
 t.stop()
 
 # close outputs
-blue.write('0')                                                                  
-blue.close()                                                                     
-orange.write('0')                                                                
-orange.close()
+rightM.setTorque(0)
+leftM.setTorque(0)
 red.write('0')                                                                
 red.close()
 
