@@ -30,14 +30,13 @@ ACC_AXIS_Z = 2
 class NeoAccelerometer():
 
 	def __init__(self, filename):
-		self.buflen = 1 # how many samples to average for each axis.
-		self.xSamp = self.ySamp = self.zSamp = 0 # which sample is the current one.
-		self.xVals = [ 0 for i in range(self.buflen) ]
-		self.yVals = [ 0 for i in range(self.buflen) ]
-		self.zVals = [ 0 for i in range(self.buflen) ]
+		# initialize data:
+		self.g = [0.0, 0.0, 0.0] # X, Y, Z
+		self.synclock = thread.allocate_lock()
+		self.ongoing = True
+		# open the device:
 		self.file = open(filename,'rb', 0)
 		# start the data pump:
-		self.ongoing = True
 		thread.start_new_thread(self.readPump, ())
 
 	def __del__(self):
@@ -59,9 +58,11 @@ class NeoAccelerometer():
 		if a_type == 0 :
 			# a "synch" event.
 			a_axis = None
+			#print "3D-SYNC"
 		if a_type == 3 :
 			# a "data" event.
 			a_axis = a_code
+			#print "AXIS-%d" % a_axis
 		return (a_axis, a_time, a_value/1000.0) # mG to G.
 
 	def readPump(self):
@@ -69,37 +70,28 @@ class NeoAccelerometer():
 		while self.ongoing:
 			# get the data from the device:
 			(axis, timestamp, value) = self.parseSample(self.getSample())
-			# keep the buffers fed:
-			if axis == ACC_AXIS_X:
-				self.xVals[self.xSamp] = value
-				self.xSamp = (self.xSamp + 1) % self.buflen
-			if axis == ACC_AXIS_Y:
-				self.yVals[self.ySamp] = value
-				self.ySamp = (self.ySamp + 1) % self.buflen
-			if axis == ACC_AXIS_Z:
-				self.zVals[self.zSamp] = value
-				self.zSamp = (self.zSamp + 1) % self.buflen
+			# keep the buffers fed, synchronising the 3 axis:
+			if not axis == None:
+				if not self.synclock.locked() : self.synclock.acquire()
+				self.g[axis] = value
+			else:
+				self.synclock.release()
 
 	def getX(self):
-		value = 0
-		for i in range(self.buflen):
-			value += self.xVals[i]
-		value /= self.buflen
-		return value
+		return self.g[ACC_AXIS_X]
 
 	def getY(self):
-		value = 0
-		for i in range(self.buflen):
-			value += self.yVals[i]
-		value /= self.buflen
-		return value
+		return self.g[ACC_AXIS_Y]
 
 	def getZ(self):
-		value = 0
-		for i in range(self.buflen):
-			value += self.zVals[i]
-		value /= self.buflen
-		return value
+		return self.g[ACC_AXIS_Z]
+
+	def getG(self):
+		# return a synchronised 3D acceleration vector:
+		self.synclock.acquire()
+		vals = (self.g[ACC_AXIS_X], self.g[ACC_AXIS_Y], self.g[ACC_AXIS_Z])
+		self.synclock.release()
+		return vals		
 
 # This is a simple test routine that only runs if this module is 
 # called directly with "python sb2_accelerometer.py"
@@ -107,7 +99,7 @@ class NeoAccelerometer():
 if __name__ == '__main__':
 	#top_acc = NeoAccelerometer('/dev/input/event3'); # top, skewed accelerometer
 	bot_acc = NeoAccelerometer('/dev/input/event4'); # bottom, straight accelerometer
-	for i in range(50):
+	while True:
 		#print bot_acc.parseSample(bot_acc.getSample())
 		t0 = time.time()
 		X = bot_acc.getX()
@@ -116,6 +108,8 @@ if __name__ == '__main__':
 		t2 = time.time()
 		Z = bot_acc.getZ()
 		t3 = time.time()
-		print "X=%0.3fG(%0.1fms);  Y=%0.3fG(%0.1fms); Z=%0.3fG(%0.1fms)" % (X, 1000*(t1-t0), Y, 1000*(t2-t1), Z, 1000*(t3-t1))
+		G = bot_acc.getG()
+		t4 = time.time()
+		print "X=%0.3fG(%0.1fms);  Y=%0.3fG(%0.1fms); Z=%0.3fG(%0.1fms); G=(%0.2f,%0.2f,%0.2f)(%0.1fms)" % (X, 1000*(t1-t0), Y, 1000*(t2-t1), Z, 1000*(t3-t1), G[0], G[1], G[2], 1000*(t4-t3))
 		time.sleep(0.5)
 
