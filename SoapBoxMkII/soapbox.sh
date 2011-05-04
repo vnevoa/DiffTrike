@@ -9,6 +9,7 @@ WI=/sys/class/rfkill/rfkill1/state
 USBHOST=/sys/devices/platform/s3c2410-ohci/usb_mode
 ACC1=/sys/devices/platform/spi_s3c24xx_gpio.0/spi3.0
 ACC2=/sys/devices/platform/spi_s3c24xx_gpio.0/spi3.1
+GPS=/sys/devices/platform/gta02-pm-gps.0/power_on
 
 test -x $APP || exit 0
 
@@ -20,7 +21,10 @@ case "$1" in
 	# network interfaces are auto configured and pulled up by 'ifup'.
 
 	# disable Bluetooth transmitter:
-	echo 0 > $BT # bluetooth off
+	echo 0 > $BT
+
+	# turn on GPS receiver:
+	echo 1 > $GPS
 
 	# enable USB Host mode:
 	ifconfig usb0 down
