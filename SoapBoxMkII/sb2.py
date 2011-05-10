@@ -24,9 +24,8 @@
 
 #### module imports ####
 
-import os, sys, signal, time, thread
-import struct, math
-import sb2_joystick, sb2_telemetry, sb2_motor, sb2_accelerometers
+import os, sys, signal, time, thread, struct, math
+import sb2_input, sb2_output, sb2_joystick, sb2_telemetry, sb2_motor, sb2_accelerometers, sb2_gps
 import pygame
 
 #### global flags
@@ -34,44 +33,24 @@ import pygame
 global ongoing
 global failed
 
-#### local classes ####
-
-class inputData():
-	def __init__(self):
-		jsX = 0 # Joystick X coordenate.
-		jsY = 0 # Joystick Y coordenate.
-		jsB1 = 0 # Joystick Button 1 state.
-		jsB2 = 0 # Joystick Button 2 state.
-		jsHatX = 0 # Joystick Hat X state.
-		jsHatY = 0 # Joystick Hat Y state.
-		acBotX = 0 # Bottom Accelerator X state.
-		acBotY = 0 # Bottom Accelerator Y state.
-		acTopX = 0 # Top Accelerator X state.
-		acTopY = 0 # Top Accelerator Y state.
-
-class outputData():
-	def __init__(self):
-		l_trq = 0 # Left wheel desired torque.
-		r_trq = 0 # Right wheel desired torque.
-		t_in = 0  # Time taken during inputs.
-		t_proc = 0 # Time taken during processing.
-		t_out = 0  # Time taken during outputs.
-		t_cycl = 0 # Period of loop cycle.
-
 #### local functions ####
 
 # "kill" signal handler
 def handler(signum, frame):
-        global ongoing
-        ongoing = False
+	""" Handles an operating system signal (kill) and prepares the main app for clean exit """
+	global ongoing
+	ongoing = False
+	time.sleep(3)
 
 # callback for the telemetry server
 def getstruct():
-        sync.acquire()
-        return struct.pack("ffffffff", o.t_in, o.t_proc, o.t_out, i.jsX, i.jsY, o.r_trq, o.l_trq, o.t_cycl)
+	""" Serializes current input and output data and makes them available for telemetry, for example. """
+	sync.acquire()
+	return i.serialize() + o.serialize()
 
 # "Application alive" LED blinker
 def blinkled():
+	""" Blinkled function: blinks the red LED according to specification """
 	global ongoing
 	global failed
 	red = open('/sys/devices/platform/leds-gpio/leds/gta02:red:aux/brightness', 'w', 0)
@@ -86,26 +65,22 @@ def blinkled():
 	red.write("0")
 	red.close()
 
-#### main program ####
+######################################
+############ main program ############
+######################################
+
+""" Main control application. Implements the control loop (acquire, process, actuate) and serves data for telemetry. """
 
 print "Starting initializations."
 t0 = time.time()
 ongoing = True
 failed = False
-i = inputData()
-o = outputData()
+i = sb2_input.inputData()
+o = sb2_output.outputData()
 sync = thread.allocate_lock()
-# connect to Left motor power bridge:
-leftM = sb2_motor.I2CMotorBridge('/dev/i2c-0', 0x22)
-leftLed = open('/sys/devices/platform/leds_pwm/leds/gta02:orange:power/brightness','w',0)
-# connect to Right motor power bridge:
-rightM = sb2_motor.I2CMotorBridge('/dev/i2c-0', 0x22) # we still only have one board, so...
-rightLed = open('/sys/devices/platform/leds_pwm/leds/gta02:blue:power/brightness','w',0)
-# connect to Bottom accelerometer (the straight one):
-accel1 = sb2_accelerometers.NeoAccelerometer('/dev/input/event4')
 
 # register termination trap:
-signal.signal(signal.SIGTERM, handler)       
+signal.signal(signal.SIGTERM, handler)
 signal.signal(signal.SIGINT, handler)
 
 # launch "alive" thread
@@ -114,17 +89,27 @@ thread.start_new_thread(blinkled, ())
 # block other threads
 sync.acquire()
 
-# initialize input objects
-pygame.init()
-stick = sb2_joystick.Joystick()
-i.jsX = i.jsY = 0
-i.failed = i.failed_j = i.failed_r = i.failed_l = False
+######################################
+# initialize hardware peripherals
+######################################
 
-# initialize output objects
-o.l_trq = o.r_trq = 0
-o.failed = o.failed_r = o.failed_l = False
-leftLed.write("0")
-rightLed.write("0")
+# connect to the usb joystick:
+pygame.init()
+stick = sb2_joystick.Joystick(0)
+
+# connect to Left motor power bridge:
+leftM = sb2_motor.I2CMotorBridge('/dev/i2c-0', 0x22)
+leftLed = open('/sys/devices/platform/leds_pwm/leds/gta02:orange:power/brightness','w',0)
+
+# connect to Right motor power bridge:
+rightM = sb2_motor.I2CMotorBridge('/dev/i2c-0', 0x22) # we still only have one board, so...
+rightLed = open('/sys/devices/platform/leds_pwm/leds/gta02:blue:power/brightness','w',0)
+
+# connect to Bottom accelerometer (the straight one):
+accel1 = sb2_accelerometers.NeoAccelerometer('/dev/input/event4')
+
+# connect to the GPS receiver:
+gps = sb2_gps.NeoGps('/dev/ttySAC1');
 
 # initialize telemetry
 t = sb2_telemetry.MyTcpServer()
@@ -133,7 +118,10 @@ t.start("192.168.5.202", 11000, getstruct)
 t1 = time.time()
 print "Init=%0.3fs. Entering control loop." % (t1 - t0)
 
+########################
 # enter control loop
+########################
+
 t_1 = t1
 while ongoing:
 
@@ -141,59 +129,96 @@ while ongoing:
 
 	t0 = time.time()
 
+	#########################
 	# read inputs
+	#########################
+
+	# read joystick:
 	try:
 		if not i.failed_j:
 			i.jsX, i.jsY = stick.getXY()
 			#io.jsB1, io.jsB2 = stick.getButtons()
 	except:
 		i.failed_j = True
+
+	# read left motor:
 	try:
 		if not i.failed_l:
-			l = leftM.getRawData()
+			i.motLC = leftM.getCurrent()
 	except:
 		i.failed_l = True
+
+	# read right motor:
 	try:
 		if not i.failed_r:
-			r = rightM.getRawData()
+			i.motRC = rightM.getCurrent()
 	except:
 		i.failed_r = True
-	i.failed = i.failed_r or i.failed_l or i.failed_j
+
+	# read lateral accelerometer:
 	try:
-		a = accel1.getY()
+		if not i.failed_a:
+			i.accY = accel1.getY()
+			i.accX = accel1.getX()
 	except:
-		pass
+		i.failed_a = True
+
+	# read Gps:
+	try:
+		if not i.failed_g:
+			i.gpsVld = gps.isValid()
+			(i.gpsSpd, i.gpsHdng) = gps.getVelocity()
+	except:
+		i.failed_g = True
+
+	i.failed = i.failed_r or i.failed_l or i.failed_j or i.failed_a or i.failed_g
+
 	t1 = time.time()
 
+	############################
 	# process data
+	############################
+
 	if i.failed or o.failed:
+		failed = True
 		o.r_trq = 0
 		o.l_trq = 0
-		failed = True
 	else:
+		failed = False
+		# simple direct mapping...
 		o.r_trq  = -i.jsY - i.jsX
 		o.r_trq = min(o.r_trq, 1)
 		o.r_trq = max(o.r_trq, 0)
+		# simple direct mapping...
 		o.l_trq = -i.jsY + i.jsX
 		o.l_trq = min(o.l_trq, 1)
 		o.l_trq = max(o.l_trq, 0)
-		failed = False
+
 	t2 = time.time()
 
+	############################
 	# write outputs
+	############################
+
 	#print "RT=%0.3f LT=%0.3f" % (o.l_trq, o.r_trq)
+
+	# write left motor:
 	try:
 		if not o.failed_l:
 			leftM.setTorque(o.l_trq)
 	except:
 		o.failed_l = True
 		print "Failed l.setTorque(%0.3f)" % (o.l_trq)
+
+	# write right motor:
 	try:
 		if not o.failed_r:
 			rightM.setTorque(o.r_trq)
 	except:
 		o.failed_r = True
 		print "Failed r.setTorque(%0.3f)" % (o.r_trq)
+
+	# fail safe mode:
 	o.failed = o.failed_r or o.failed_l
 	if i.failed:
 		leftLed.write("20")
@@ -206,9 +231,13 @@ while ongoing:
 		leftLed.write("255")
 		if not o.failed_r:
 			rightM.setTorque(0)
+
 	t3 = time.time()
 
-	# set accounting for telemetry
+	############################
+	# do telemetry
+	############################
+
 	o.t_in   = (t1 - t0)
 	o.t_proc = (t2 - t1)
 	o.t_out  = (t3 - t2)
@@ -222,10 +251,8 @@ while ongoing:
 	time.sleep(0.010)
 
 # exited control loop, clean up
-print i.failed_j, i.failed_l, i.failed_r
-print o.failed_l, o.failed_r
 
 # stop telemetry server
 t.stop()
-
+time.sleep(1)
 
