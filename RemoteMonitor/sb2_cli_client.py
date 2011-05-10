@@ -23,10 +23,8 @@
 # controller in real time on the console.
 #
 
-import socket
-import sys
-import time
-import struct
+import socket, sys, time
+import sb2_input, sb2_output
 
 HOST = "192.168.5.202"
 PORT = 11000
@@ -37,16 +35,29 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.connect((HOST, PORT))
 
 # Receive data from the server and shut down
-i = 0
 t_1 = time.time()
-while 1 : #i < 50:
-	received = sock.recv(32)
-	(t_in, t_proc, t_out, X, Y, right, left, t_cycl) = struct.unpack('ffffffff', received)
-	t = time.time()
-	print "T:%0.3f: L:%d C:%0.3f I:%0.3f P:%0.3f O:%0.3f X:%0.3f Y:%0.3f R:%0.3f L:%0.3f" % \
-	( (t - t_1), len(received), t_cycl, t_in, t_proc, t_out, X, Y, right, left )
-	t_1 = t
-	i+=1
+i = sb2_input.inputData()
+o = sb2_output.outputData()
+bi = len(i.serialize())
+bo = len(o.serialize())
+print "input data is %d bytes, output data is %d bytes, total is %d." % (bi, bo, bi+bo)
+print
+while True:
+	received = sock.recv(bi+bo)
+	#print "received = %d" % len(received)
+	if (len(received) == bi+bo):
+		#print len(received), print len(received[0:bi]), len(received[bi:bi+bo])
+		i.deserialize(received[0:bi])
+		o.deserialize(received[bi:bi+bo])
+		t = time.time()
+		print "ACC=%0.3f, %0.3f" % (i.accX, i.accY)
+		print "GPS=%d, %0.1f, %0.1f" % (i.gpsVld, i.gpsSpd, i.gpsHdng)
+		#print "T:%0.3f: L:%d C:%0.3f I:%0.3f P:%0.3f O:%0.3f X:%0.3f Y:%0.3f R:%0.3f L:%0.3f" % \
+		#( (t - t_1), len(received), t_cycl, t_in, t_proc, t_out, X, Y, right, left )
+		t_1 = t
+	else:
+		print "failed reception (%d bytes)" % len(received)
+
 sock.close()
 
 

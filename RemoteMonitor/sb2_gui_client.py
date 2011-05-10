@@ -24,6 +24,7 @@
 #
 
 import sys, os, math, pygame, thread, socket, struct, time
+import sb2_input, sb2_output
 from pygame.locals import * 
 from pygame.gfxdraw import *
 from pygame.joystick import *
@@ -40,7 +41,7 @@ class Window():
 	"""main window behaviour"""
 	def __init__(self, fillcolor=(0, 0, 0)):
 		self.color = fillcolor
-		pygame.display.set_mode((0,0), pygame.FULLSCREEN) 
+		pygame.display.set_mode((0,0)) #, pygame.FULLSCREEN) 
 		pygame.display.set_caption('SoapBox Mark II Control GUI')
 		pygame.mouse.set_visible(0)
 		self.sf = pygame.display.get_surface()
@@ -143,10 +144,9 @@ class Telemetry():
 		self.fresh = 0
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.sock.settimeout(3.0)
+		self.i = sb2_input.inputData()
+		self.o = sb2_output.outputData()
 		self.a = 0
-		self.t_in = self.t_proc = self.t_out = self.t_cycl = 0
-		self.X = self.Y = 0
-		self.r_trq = self.l_trq = 0
 		self.t = time.time()
 		self.blackout_histo = Histogram()
 		thread.start_new_thread(self.receive, ())
@@ -156,26 +156,36 @@ class Telemetry():
 			try:
 				self.sock.connect((self.host, self.port))
 				self.connected = 1
+				bytes_i = len(self.i.serialize())
+				bytes_o = len(self.o.serialize())
+				#print bytes_i, bytes_o
 				while True:
-					received = self.sock.recv(32)
+					received = self.sock.recv(bytes_i + bytes_o)
 					self.t_1 = self.t
 					self.t = time.time()
 					self.blackout_histo.inc(int(1000 * (self.t - self.t_1)))
-					(self.t_in, self.t_proc, self.t_out, self.X, self.Y, self.r_trq, self.l_trq, self.t_cycl) = struct.unpack('ffffffff', received)
+					self.i.deserialize(received[0:bytes_i])
+					self.o.deserialize(received[bytes_i:bytes_i+bytes_o])
 					self.fresh = 1
 			except:
 				self.connected = 0
 				self.sock.close()
 
-	def getXY(self):
-		return (self.X, self.Y)
+	def getJoystick(self):
+		return (self.i.jsX, self.i.jsY)
 
-	def getWheels(self):
-		return (self.r_trq, self.l_trq)
+	def getTorque(self):
+		return (self.o.l_trq, self.o.r_trq, self.i.motLC, self.i.motRC)
     
 	def getTimes(self):
 		self.fresh = 0
-		return (self.t_in, self.t_proc, self.t_out, self.t_cycl)
+		return (self.o.t_in, self.o.t_proc, self.o.t_out, self.o.t_cycl)
+
+	def getAccel(self):
+		return (self.i.accX, self.i.accY)
+
+	def getGps(self):
+		return (self.i.gpsVld, self.i.gpsSpd, self.i.gpsHdng)
 
 
 class Histogram():
@@ -220,7 +230,7 @@ while True:
 	if stick.present:
 		X, Y = stick.getXY()
 	else:
-		X, Y = tele.getXY()
+		X, Y = tele.getJoystick()
 	fresh_data = tele.fresh
 	(ti, tp, to, tc) = tele.getTimes()
 
@@ -281,8 +291,8 @@ while True:
 	bg.redraw()
 	frame.draw(bg)
 	cross.draw(bg)
-	left_torque_graph.draw(0.5+tele.l_trq/2)
-	right_torque_graph.draw(0.5+tele.r_trq/2)
+	left_torque_graph.draw(0.5+tele.o.l_trq/2)
+	right_torque_graph.draw(0.5+tele.o.r_trq/2)
 	pygame.display.flip()
 
 	# wait 1/x seconds
