@@ -27,28 +27,24 @@ from pygame.joystick import *
 class Joystick():
     """initializes and gets data from the joystick"""                                                    
 
-    def __init__(self):                                                                  
-        init = pygame.joystick.get_init()                                                
-        count = pygame.joystick.get_count()                                              
-        self.buttons = 0                                                                 
-        print 'Joystick module init = ' + str(init) + '.'                                
-        print 'Found ' + str(count) + ' joysticks.'                                      
-        for js in range(count):                                                          
-                tmp = pygame.joystick.Joystick(js)                                   
-                print 'Joystick' + str(js) + ': ' + tmp.get_name()                 
-        if count:                                                 
-                self.dev = pygame.joystick.Joystick(0)            
-                self.dev.init()                                   
-                self.buttons = self.dev.get_numbuttons()          
-                self.hats = self.dev.get_numhats()                
-                self.trackballs = self.dev.get_numballs()         
-                self.present = 1                                  
-        else:                                                     
-                self.present = 0                                  
-                                                                  
-    def getXY(self):                                              
-        return ( self.dev.get_axis(0), self.dev.get_axis(1) )     
-                                                                                                         
+    def __init__(self, joystick_num):
+        init = pygame.joystick.get_init()
+        count = pygame.joystick.get_count()
+        self.buttons = 0
+        if (count >= joystick_num):
+            self.dev = pygame.joystick.Joystick(joystick_num)
+            print 'Initializing Joystick' + str(joystick_num) + ': ' + self.dev.get_name()
+            self.dev.init()
+            self.buttons = self.dev.get_numbuttons()
+            self.hats = self.dev.get_numhats()
+            self.trackballs = self.dev.get_numballs()
+            self.present = 1
+        else:
+            self.present = 0
+     
+    def getXY(self):
+        return ( self.dev.get_axis(0), self.dev.get_axis(1) )
+
     def getButtons(self):                                                                                
         ret = (0)                                                                                        
         #ret =                                                                                           
