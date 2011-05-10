@@ -24,6 +24,7 @@
 #
 
 import sys, os, math, pygame, thread, socket, struct, time
+sys.path.append("../SoapBoxMkII")
 import sb2_input, sb2_output
 from pygame.locals import * 
 from pygame.gfxdraw import *
@@ -41,7 +42,7 @@ class Window():
 	"""main window behaviour"""
 	def __init__(self, fillcolor=(0, 0, 0)):
 		self.color = fillcolor
-		pygame.display.set_mode((0,0)) #, pygame.FULLSCREEN) 
+		pygame.display.set_mode((0,0), pygame.FULLSCREEN)
 		pygame.display.set_caption('SoapBox Mark II Control GUI')
 		pygame.mouse.set_visible(0)
 		self.sf = pygame.display.get_surface()
