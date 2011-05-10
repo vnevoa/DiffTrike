@@ -24,6 +24,7 @@
 #
 
 import socket, sys, time
+sys.path.append("../SoapBoxMkII")
 import sb2_input, sb2_output
 
 HOST = "192.168.5.202"
