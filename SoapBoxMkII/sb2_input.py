@@ -79,8 +79,8 @@ class inputData():
 		self.gpsVld = True
 
 		# motor bridge data:
-		self.motLC = (self.seed * 40) - 20 # -20..20 
-		self.motRC = 20 - (self.seed * 40) # -20..20
+		self.motLC = 20 - (self.seed * 40) # -20..20
+		self.motRC = (self.seed * 40) - 20 # -20..20
 
 
 	def serialize(self):
