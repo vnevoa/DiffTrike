@@ -20,7 +20,7 @@
 # and the telemetry module.
 #
 
-import struct
+import struct, random
 
 class outputData():
 	def __init__(self):
@@ -36,7 +36,20 @@ class outputData():
 		self.failed = False # Generic Fail Flag for Output.
 		self.failed_r = False # Fail Flag for Right Motor Output.
 		self.failed_l = False # Fail Flag for Left Motor Output.
+		self.seed = 0 # only for random test data.
 
+	def randomize(self):
+		""" fills up the structure with random data. used only for testing. """
+
+		#self.seed = ( random.random() + self.seed ) / 2
+		self.seed = random.random()
+
+		self.l_trq = self.seed * 2 - 1 # -1..1 
+		self.r_trq = 1 - self.seed * 2 # -1..1
+		self.t_in = 0  # 
+		self.t_proc = 0 # 
+		self.t_out = 0  # 
+		self.t_cycl = 0 # 
 
 	def serialize(self):
 

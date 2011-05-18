@@ -20,7 +20,7 @@
 # and the telemetry module.
 #
 
-import struct
+import struct, random
 
 class inputData():
 	def __init__(self):
@@ -56,6 +56,32 @@ class inputData():
 		# failure data:
 		self.failed = False # Generic Fail Flag for Input.
 
+		self.seed = 0 # for random test data.
+
+
+	def randomize(self):
+
+		""" fills up the structure with random data. used only for testing. """
+
+		self.seed = random.random()
+
+		# joystick data:
+		self.jsX = (self.seed * 2) - 1 # -1..1
+		self.jsY = 1 - (self.seed * 2) # -1..1
+
+		# accelerometer data:
+		self.accX = (self.seed * 4) - 2 # -2..2
+		self.accY = 2 - (self.seed * 4) # -2..2
+
+		# gps data:
+		self.gpsSpd = self.seed * 50 * 3.6 # km/h
+		self.gpsHdng = self.seed * 360 # 0..360
+		self.gpsVld = True
+
+		# motor bridge data:
+		self.motLC = (self.seed * 40) - 20 # -20..20 
+		self.motRC = 20 - (self.seed * 40) # -20..20
+
 
 	def serialize(self):
 
@@ -82,6 +108,7 @@ class inputData():
 
 if __name__ == '__main__':
 	i = inputData()
+	i.randomize()
 	a = i.serialize()
 	print len(a)
 	i.deserialize(a)
