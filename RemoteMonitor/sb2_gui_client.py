@@ -18,34 +18,52 @@
 #    along with DiffTrike. If not, see <http://www.gnu.org/licenses/>.
 
 #
-# This implements a graphical user interface application that connects to
-# the Trike controller via a socket to monitor the internal state of the
-# controller in real time. It requires PyGame.
+# This implements a graphical application that connects to
+# the Trike controller via a socket to monitor the internal
+# state of the controller in real time. It requires PyGame.
 #
 
-import sys, os, pygame, time
+import sys, os, pygame, time, getopt
 sys.path.append("../SoapBoxMkII") # sb2_input & sb2_output are shared.
 import sb2_gui_data, sb2_gui_widgets
 from pygame.locals import * 
 from pygame.gfxdraw import *
 
+# parse commannd line arguments:
+testing = False
+try:
+	opts, args = getopt.getopt(sys.argv[1:], "t")
+except getopt.GetoptError, err:
+	# print help information and exit:
+	print str(err) # will print something like "option -a not recognized"
+	sys.exit(2)
+for o, a in opts:
+	if (o == "-t"):
+		testing = True
 
-# initialization routine:
+# do initializations:
 pygame.init()
 bg = sb2_gui_widgets.Window()
 frame = sb2_gui_widgets.Sights()
 cross = sb2_gui_widgets.Crosshair()
-left_torque_graph = sb2_gui_widgets.Bargraph(bg, (bg.width/2 - frame.size/2 - 100, bg.height/2 - frame.size/2))
-right_torque_graph = sb2_gui_widgets.Bargraph(bg, (bg.width/2 + frame.size/2 + 75, bg.height/2 - frame.size/2))
+left_pwm_graph = sb2_gui_widgets.Bargraph(bg, (bg.width/2 - frame.size/2 - 100, bg.height/2 - frame.size/2))
+right_pwm_graph = sb2_gui_widgets.Bargraph(bg, (bg.width/2 + frame.size/2 + 50, bg.height/2 - frame.size/2))
+left_torque_graph = sb2_gui_widgets.Bargraph(bg, (bg.width/2 - frame.size/2 - 200, bg.height/2 - frame.size/2), (50, 250), (0,0,200))
+right_torque_graph = sb2_gui_widgets.Bargraph(bg, (bg.width/2 + frame.size/2 + 150, bg.height/2 - frame.size/2), (50, 250), (0,0,200))
+lateral_acc_graph = sb2_gui_widgets.Bargraph(bg, (bg.width/2 - 125, bg.height/2 + frame.size/2 + 50), (250, 50), (128,0,0))
 clock = pygame.time.Clock()
 stick = sb2_gui_data.Joystick()
-tele = sb2_gui_data.Telemetry("192.168.5.202", 11000)
 timer_histo = sb2_gui_data.Histogram()
 input_histo = sb2_gui_data.Histogram()
 proc_histo = sb2_gui_data.Histogram()
 output_histo = sb2_gui_data.Histogram()
 total_histo = sb2_gui_data.Histogram()
 histo_show = False
+paused = False
+if testing:
+	tele = sb2_gui_data.DummyTelemetry()
+else:
+	tele = sb2_gui_data.Telemetry("192.168.5.202", 11000)
 
 # event loop:
 while True: 
@@ -68,6 +86,8 @@ while True:
 				sys.exit(0)
 			if event.unicode == 'h':
 				histo_show = not histo_show
+			if event.unicode == 'p':
+				paused = not paused
 
 	cross.x = bg.width/2 + ( frame.size/2 * X )
 	cross.y = bg.height/2 + ( frame.size/2 * Y )
@@ -78,6 +98,10 @@ while True:
 		output_histo.inc("%0.1f" % (1000 * to))
 		timer_histo.inc("%0.1f" % (1000 * tc))
 		total_histo.inc("%0.1f" % (1000 * (ti+tp+to)))
+
+	if paused:
+		clock.tick(25)
+		continue
 
     # update screen:
 
@@ -111,13 +135,16 @@ while True:
 			for t in total_histo.getall():
 				(hs, vs) = bg.write("   %sms : %d" % (t[0], t[1]), hs5+10, 5+vs)
 
-	bg.write("X=%0.2f Y=%0.2f" % (X, Y), cross.x+10, cross.y+10)
+	bg.write("%0.2f %0.2f" % (X, Y), cross.x+10, cross.y+10)
 
 	bg.redraw()
 	frame.draw(bg)
 	cross.draw(bg)
-	left_torque_graph.draw(0.5+tele.o.l_trq/2)
-	right_torque_graph.draw(0.5+tele.o.r_trq/2)
+	left_pwm_graph.draw(0.5+tele.o.l_trq/2)
+	right_pwm_graph.draw(0.5+tele.o.r_trq/2)
+	left_torque_graph.draw(0.5+tele.i.motRC/40)
+	right_torque_graph.draw(0.5+tele.i.motRC/40)
+	lateral_acc_graph.draw(0.5+tele.i.accY/4)
 	pygame.display.flip()
 
 	# wait 1/x seconds
