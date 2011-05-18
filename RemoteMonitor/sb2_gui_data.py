@@ -94,6 +94,45 @@ class Telemetry():
 		return (self.i.gpsVld, self.i.gpsSpd, self.i.gpsHdng)
 
 
+class DummyTelemetry():
+	"""creates dummy data for use in testing."""
+
+	def __init__(self):
+		self.connected = 0
+		self.fresh = 1
+		self.i = sb2_input.inputData()
+		self.o = sb2_output.outputData()
+		self.t = time.time()
+		self.blackout_histo = Histogram()
+		thread.start_new_thread(self.receive, ())
+
+	def receive(self):
+		while True:
+			self.t_1 = self.t
+			self.t = time.time()
+			self.blackout_histo.inc(int(1000 * (self.t - self.t_1)))
+			self.i.randomize()
+			self.o.randomize()
+			self.fresh = 1
+			time.sleep(0.25)
+
+	def getJoystick(self):
+		return (self.i.jsX, self.i.jsY)
+
+	def getTorque(self):
+		return (self.o.l_trq, self.o.r_trq, self.i.motLC, self.i.motRC)
+    
+	def getTimes(self):
+		self.fresh = 0
+		return (self.o.t_in, self.o.t_proc, self.o.t_out, self.o.t_cycl)
+
+	def getAccel(self):
+		return (self.i.accX, self.i.accY)
+
+	def getGps(self):
+		return (self.i.gpsVld, self.i.gpsSpd, self.i.gpsHdng)
+
+
 class Histogram():
 	"""holds event frequency data."""
 
