@@ -106,27 +106,35 @@ class Crosshair():
 class Bargraph():
 	"""draws a bar graph"""
 
-	def __init__(self, bg, place, size=(50,250), color=(0,128,0)):
+	def __init__(self, bg, place, lims=(-1,1), size=(50,250), color=(128,128,128)):
 		self.bg = bg
 		self.size = size
 		self.place = place
 		self.color = color
+		self.lims = lims
+		self.mult = lims[1] - lims[0]
 
-	def draw(self, fillfactor):
+	def draw(self, value):
 		x = self.place[0]
 		y = self.place[1]
 		width =  self.size[0]
 		height = self.size[1]
 		# erase the whole area:
 		pygame.draw.rect( self.bg.sf, self.bg.color, (x, y, width, height), 0)
+		# write value text:
+		txt = Text(format(value,"0.2f"), x, y)
+		self.bg.sf.blit(txt.sf, (txt.x, txt.y))
+		(h, v) = txt.sf.get_size()
 		# draw the border:
-		pygame.draw.rect( self.bg.sf, self.color, (x, y, width, height), 1)
+		pygame.draw.rect( self.bg.sf, self.color, (x, y+v, width, height), 1)
 		# draw the filling:
+		fillfactor = (value - self.lims[0]) / self.mult
 		if (height >= width):
 			y = self.place[1]+(1-fillfactor)*self.size[1]
 			height = fillfactor*self.size[1]
 		else:
 			x = self.place[0]+(1-fillfactor)*self.size[0]
 			width = fillfactor*self.size[0]
-		pygame.draw.rect( self.bg.sf, self.color, (x, y, width, height), 0)
+		pygame.draw.rect( self.bg.sf, self.color, (x, y+v, width, height), 0)
+
 
