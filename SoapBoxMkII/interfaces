@@ -26,7 +26,7 @@ iface usb0 inet static
 	pre-up echo device > /sys/devices/platform/s3c2410-ohci/usb_mode
 	pre-up modprobe s3c2410_udc
 	pre-up modprobe g_ether
-	address 192.168.5.202
+	address 192.168.5.203
 	netmask 255.255.255.0
 	network 192.168.5.0
 	up route add default gw 192.168.5.200 metric 8
