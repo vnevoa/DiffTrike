@@ -19,7 +19,7 @@
 # This implements several graphical widgets. It requires PyGame.
 #
 
-import pygame
+import pygame, math
 from pygame.gfxdraw import *
 from pygame.font import *
 from pygame.locals import * 
@@ -58,49 +58,44 @@ class Window():
 
 class Sights():
 	"""draws the targeting sights"""
-	def __init__(self, size=250, color=(255,0,0)):
+	def __init__(self, bg, size=250, color=(255,0,0)):
+		self.bg = bg
 		self.color = color
 		self.size = size
+		self.p1 = ( (bg.width - size)/2, (bg.height - size)/2 )
+		self.p2 = ( (bg.width + size)/2, (bg.height - size)/2 )
+		self.p3 = ( (bg.width - size)/2, (bg.height + size)/2 )
+		self.p4 = ( (bg.width + size)/2, (bg.height + size)/2 )
+		self.p5 = ( bg.width/2, -0.05*size + (bg.height - size)/2 )
+		self.p6 = ( bg.width/2,  0.05*size + (bg.height + size)/2 )
+		self.p7 = ( -0.05*size + (bg.width - size)/2, bg.height/2 )
+		self.p8 = (  0.05*size + (bg.width + size)/2, bg.height/2 )
 
-	def draw(self, bg):
-		p1 = ( (bg.width - self.size)/2, (bg.height - self.size)/2 )
-		p2 = ( (bg.width + self.size)/2, (bg.height - self.size)/2 )
-		p3 = ( (bg.width - self.size)/2, (bg.height + self.size)/2 )
-		p4 = ( (bg.width + self.size)/2, (bg.height + self.size)/2 )
-		pygame.draw.line( bg.sf, self.color, p1, p2 )
-		pygame.draw.line( bg.sf, self.color, p2, p4 )
-		pygame.draw.line( bg.sf, self.color, p4, p3 )
-		pygame.draw.line( bg.sf, self.color, p3, p1 )
-		p5 = ( bg.width/2, -0.05*self.size + (bg.height - self.size)/2 )
-		p6 = ( bg.width/2,  0.05*self.size + (bg.height + self.size)/2 )
-		p7 = ( -0.05*self.size + (bg.width - self.size)/2, bg.height/2 )
-		p8 = (  0.05*self.size + (bg.width + self.size)/2, bg.height/2 )
-		pygame.draw.line( bg.sf, self.color, p5, p6 )
-		pygame.draw.line( bg.sf, self.color, p7, p8 )
+	def draw(self):
+		# square
+		pygame.draw.polygon( self.bg.sf, self.color, (self.p1, self.p2, self.p4, self.p3), 1)
+		# cross
+		pygame.draw.line( self.bg.sf, self.color, self.p5, self.p6 )
+		pygame.draw.line( self.bg.sf, self.color, self.p7, self.p8 )
 
 
 class Crosshair():
 	"""draws a targeting crosshair"""
 
-	def __init__(self, size=25, color=(0,255,0)):
+	def __init__(self, bg, size=25, color=(0,255,0)):
+		self.bg = bg
 		self.color = color
 		self.size = size
 		self.x = 250
 		self.y = 150
 
-	def draw(self, bg):
+	def draw(self):
 		p1 = ( self.x, self.y - (self.size/2) )
 		p2 = ( self.x, self.y + (self.size/2) )
 		p3 = ( self.x - (self.size/2), self.y )
 		p4 = ( self.x + (self.size/2), self.y )
-		pygame.draw.line( bg.sf, self.color, p1, p2 )
-		pygame.draw.line( bg.sf, self.color, p3, p4 )
-
-	def delete(self, bg):
-		prev = self.color
-		self.color = bg.color
-		self.draw(bg)
-		self.color = prev
+		pygame.draw.line( self.bg.sf, self.color, p1, p2 )
+		pygame.draw.line( self.bg.sf, self.color, p3, p4 )
 
 
 class Bargraph():
@@ -136,5 +131,25 @@ class Bargraph():
 			x = self.place[0]+(1-fillfactor)*self.size[0]
 			width = fillfactor*self.size[0]
 		pygame.draw.rect( self.bg.sf, self.color, (x, y+v, width, height), 0)
+
+
+class Azimuth():
+	"""draws an azimuth circle"""
+
+	def __init__(self, bg, place=(0,0), size=25, color=(0,255,0)):
+		self.bg = bg
+		self.centre = place
+		self.color = color
+		self.r = size
+
+	def draw(self, deg, vel):
+		# tell speed:
+		txt = Text(format(vel,"0.2f"), self.centre[0], self.centre[1] - self.r - 20)
+		self.bg.sf.blit(txt.sf, (txt.x, txt.y))
+		# tell heading:
+		pygame.draw.circle(self.bg.sf, self.color, self.centre, self.r, 1)
+		rad = math.radians(deg)
+		p = (self.centre[0] + self.r * math.sin(rad), self.centre[1] - self.r * math.cos(rad))
+		pygame.draw.line(self.bg.sf, self.color, self.centre, p)
 
 
