@@ -102,7 +102,7 @@ leftM = sb2_motor.I2CMotorBridge('/dev/i2c-0', 0x22)
 leftLed = open('/sys/devices/platform/leds_pwm/leds/gta02:orange:power/brightness','w',0)
 
 # connect to Right motor power bridge:
-rightM = sb2_motor.I2CMotorBridge('/dev/i2c-0', 0x22) # we still only have one board, so...
+rightM = sb2_motor.I2CMotorBridge('/dev/i2c-0', 0x23)
 rightLed = open('/sys/devices/platform/leds_pwm/leds/gta02:blue:power/brightness','w',0)
 
 # connect to Bottom accelerometer (the straight one):
@@ -146,14 +146,16 @@ while ongoing:
 		if not i.failed_l:
 			i.motLC = leftM.getCurrent()
 	except:
-		i.failed_l = True
+	#	i.failed_l = True
+		pass
 
 	# read right motor:
 	try:
 		if not i.failed_r:
 			i.motRC = rightM.getCurrent()
 	except:
-		i.failed_r = True
+	#	i.failed_r = True
+		pass
 
 	# read lateral accelerometer:
 	try:
