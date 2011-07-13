@@ -20,10 +20,8 @@
 # This module implements the electric motor driver and data extraction.
 #
 
-import fcntl, struct
-import time
-
-IOCTL_I2C_SETSLAVEADDRESS = 0x0703
+import struct, time
+import i2c_lib
 
 # Bridge controller registers:
 REG_COMMAND = 0
@@ -37,45 +35,80 @@ REG_FW_VERSION = 7
 class I2CMotorBridge():
 
 	def __init__(self, filename, address):
-		self.file = open(filename,'r+b', 0)
-		fcntl.ioctl(self.file, IOCTL_I2C_SETSLAVEADDRESS, address)
-
-	def __del__(self):
-		self.file.close()
+		self.device = i2c_lib.I2CSlave(filename, address)
 
 	def getRawData(self):
-		self.file.write(struct.pack('B', 0)) # seek to beginning of registers.
-		return struct.unpack('BBBBBBBB', self.file.read(8)) # dump all of them.
+		self.device.seek(0) # seek to beginning of registers.
+		return struct.unpack('BBBBBBBB', self.device.read(8)) # dump all of them.
 
 	def getCurrent(self):
-		self.file.write(struct.pack('B', REG_CURRENT))
-		(T,) = struct.unpack('B', self.file.read(1))
+		self.device.seek(REG_CURRENT)
+		(T,) = struct.unpack('B', self.device.read(1))
 		return (T / 10.0) # Ampere
 
 	def getTemperature(self):
-		self.file.write(struct.pack('B', REG_TEMPERATURE))
-		(t,) = struct.unpack('B', self.file.read(1))
+		self.device.seek(REG_TEMPERATURE)
+		(t,) = struct.unpack('B', self.device.read(1))
 		return t # Celsius
 
 	def getVoltage(self):
-		self.file.write(struct.pack('B', REG_BAT_VOLTAGE))
-		(v,) = struct.unpack('B', self.file.read(1))
+		self.device.seek(REG_BAT_VOLTAGE)
+		(v,) = struct.unpack('B', self.device.read(1))
 		return ((v + 100) / 10.0) # Volt
 
 	def setTorque(self, desired): # [0..1]
-		self.file.write(struct.pack('BB', REG_PWM, int(desired*255))) # PWM duty cycle, 0-255
+		self.device.write(REG_PWM, int(desired*255)) # PWM duty cycle, 0-255
 
 # This is a simple test routine that only runs if this module is 
 # called directly with "python sb2_motor.py"
 
 if __name__ == '__main__':
-	m = I2CMotorBridge('/dev/i2c-0', 0x22)
-	for x in range(3):
-		t0 = time.time()
-		m.file.write(struct.pack('B', REG_BAT_VOLTAGE))
-		t1 = time.time()
-		m.file.read(1)
-		t2 = time.time()
-		print " Write=%0.1fms;  Read=%0.1fms" % (1000*(t1-t0), 1000*(t2-t1))
 
+	m1 = I2CMotorBridge('/dev/i2c-0', 0x22)
+	m2 = I2CMotorBridge('/dev/i2c-0', 0x23)
 
+	while True:
+
+		print "Motor 1:"
+
+		try:
+			t0 = time.time()
+			m1.setTorque(0)
+			t1 = time.time()
+			print " Write=%0.1fms" % (1000*(t1-t0))
+		except:
+			t1 = time.time()
+			print " Write=failed (%0.1fms)" % (1000*(t1-t0))
+
+		try:
+			t0 = time.time()
+			m1.getRawData()
+			t1 = time.time()
+			print " Read=%0.1fms" % (1000*(t1-t0))
+		except:
+			t1 = time.time()
+			print " Read=failed (%0.1fms)" % (1000*(t1-t0))
+
+		print "Motor 2:"
+
+                try:
+                    	t0 = time.time()
+                        m2.setTorque(0)
+                        t1 = time.time()
+                        print " Write=%0.1fms" % (1000*(t1-t0))
+                except:
+                       	t1 = time.time()
+                        print " Write=failed (%0.1fms)" % (1000*(t1-t0))
+
+                try:
+                        t0 = time.time()
+                        m2.getRawData()
+                        t1 = time.time()
+                        print " Read=%0.1fms" % (1000*(t1-t0))
+                except:
+                        t1 = time.time()
+                        print " Read=failed (%0.1fms)" % (1000*(t1-t0))
+
+                print ""
+
+		time.sleep(0.5)
