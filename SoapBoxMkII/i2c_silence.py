@@ -19,12 +19,12 @@
 #    along with DiffTrike. If not, see <http://www.gnu.org/licenses/>.
 
 #
-# This module implements the IIC bus library.
+# This script masks the "every second" interrupt of the Real
+# Time Clock (RTC) in the PCF50633 (Power Management Unit) chip.
 #
 
 import i2c_lib
 
-# mask the RTC interrupts from PCF50633 power management unit.
-pmu = i2c_lib.I2CSlave('/dev/i2c-0', 0x73, True)
+pmu = i2c_lib.I2CSlave('/dev/i2c-0', 0x73, True) # force usage, kernel is bound to it.
 pmu.write(0x07, 0xC0)
 
