@@ -55,27 +55,32 @@ class Telemetry():
 		self.a = 0
 		self.t = time.time()
 		self.blackout_histo = Histogram()
+		self.glitches = 0
 		thread.start_new_thread(self.receive, ())
 
 	def receive(self):
-		while True:
-			try:
-				self.sock.connect((self.host, self.port))
-				self.connected = 1
-				bytes_i = len(self.i.serialize())
-				bytes_o = len(self.o.serialize())
-				#print bytes_i, bytes_o
-				while True:
-					received = self.sock.recv(bytes_i + bytes_o)
-					self.t_1 = self.t
-					self.t = time.time()
-					self.blackout_histo.inc(int(1000 * (self.t - self.t_1)))
-					self.i.deserialize(received[0:bytes_i])
-					self.o.deserialize(received[bytes_i:bytes_i+bytes_o])
-					self.fresh = 1
-			except:
-				self.connected = 0
-				self.sock.close()
+		try:
+			self.sock.connect((self.host, self.port))
+			self.connected = 1
+			bytes_i = len(self.i.serialize())
+			bytes_o = len(self.o.serialize())
+			#print bytes_i, bytes_o
+			while True:
+				received = self.sock.recv(bytes_i + bytes_o)
+				if (len(received) != bytes_i + bytes_o):
+					self.glitches += 1
+					print "Socket glitch!", len(received), bytes_i + bytes_o 
+					continue # ignore data, collect more.
+				self.t_1 = self.t
+				self.t = time.time()
+				self.blackout_histo.inc(int(1000 * (self.t - self.t_1)))
+				self.i.deserialize(received[0:bytes_i])
+				self.o.deserialize(received[bytes_i:bytes_i+bytes_o])
+				self.fresh = 1
+		except:
+			self.connected = 0
+			self.sock.close()
+			print "Socket was lost!"
 
 	def getJoystick(self):
 		return (self.i.jsX, self.i.jsY)
@@ -149,4 +154,20 @@ class Histogram():
 		ks = self.data.keys()
 		ks.sort(None, None, True)
 		return ((k, self.data[k]) for k in ks)
+
+
+class FileLog():
+	"""records event data to the file system."""
+
+	def __init__(self, filename):
+		self.file = open(filename, 'w', 1024)
+		self.synclock = thread.allocate_lock()
+
+	def write(self, data):
+		self.synclock.acquire()
+		self.file.write(data)
+		self.synclock.release()
+
+	def __del__(self):
+		self.file.close()
 
