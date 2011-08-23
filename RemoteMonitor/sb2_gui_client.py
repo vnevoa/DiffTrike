@@ -43,6 +43,7 @@ for o, a in opts:
 
 # do initializations:
 pygame.init()
+log = sb2_gui_data.FileLog("gui.log")
 bg = sb2_gui_widgets.Window()
 frame = sb2_gui_widgets.Sights(bg, 100)
 cross = sb2_gui_widgets.Crosshair(bg)
@@ -51,7 +52,7 @@ left_pwm_graph = sb2_gui_widgets.Bargraph(bg, (bg.width/2 - frame.size/2 - 100, 
 right_pwm_graph = sb2_gui_widgets.Bargraph(bg, (bg.width/2 + frame.size/2 + 50, bg.height/2 - frame.size/2 - 150), (-1,1))
 left_torque_graph = sb2_gui_widgets.Bargraph(bg, (bg.width/2 - frame.size/2 - 200, bg.height/2 - frame.size/2 - 150), (-20,20), (50, 250), (0,0,200))
 right_torque_graph = sb2_gui_widgets.Bargraph(bg, (bg.width/2 + frame.size/2 + 150, bg.height/2 - frame.size/2 - 150), (-20,20), (50, 250), (0,0,200))
-lateral_acc_graph = sb2_gui_widgets.Bargraph(bg, (bg.width/2 - frame.size, bg.height/2 + frame.size/2 + 50), (-2,2), (frame.size*2, 50), (128,0,0))
+lateral_acc_graph = sb2_gui_widgets.Bargraph(bg, (bg.width/2 - frame.size, bg.height/2 + frame.size/2 + 50), (-2.5, 2.5), (frame.size*2, 50), (128,0,0))
 clock = pygame.time.Clock()
 stick = sb2_gui_data.Joystick()
 timer_histo = sb2_gui_data.Histogram()
@@ -100,15 +101,18 @@ while True:
 		timer_histo.inc("%0.1f" % (1000 * tc))
 		total_histo.inc("%0.1f" % (1000 * (ti+tp+to)))
 
+	# dump all data to file in binary format.
+	log.write(tele.i.serialize() + tele.o.serialize())
+
 	if paused:
 		clock.tick(25)
 		continue
 
     # update screen:
 
-	(hs, vs1) = bg.write("connected = %d" % tele.connected, 10, 10)
+	(hs, vs1) = bg.write("connection glitches = %d" % tele.glitches, 10, 10)
 
-	if histo_show:
+	if histo_show:  # show only histograms...
 
 		(hs1, vs) = bg.write("blackout histogram:", 10, 10+vs1)
 		for t in tele.blackout_histo.getall():
@@ -136,17 +140,22 @@ while True:
 			for t in total_histo.getall():
 				(hs, vs) = bg.write("   %sms : %d" % (t[0], t[1]), hs5+10, 5+vs)
 
-	bg.write("%0.2f %0.2f" % (X, Y), cross.x+10, cross.y+10)
+	else:	# show only widgets...
+ 
+		bg.write("%0.2f %0.2f" % (X, Y), cross.x+10, cross.y+10)
 
 	bg.redraw()
-	frame.draw()
-	gps_radar.draw(tele.i.gpsHdng, tele.i.gpsSpd)
-	cross.draw()
-	left_pwm_graph.draw(tele.o.l_trq)
-	right_pwm_graph.draw(tele.o.r_trq)
-	left_torque_graph.draw(tele.i.motLC)
-	right_torque_graph.draw(tele.i.motRC)
-	lateral_acc_graph.draw(tele.i.accY)
+
+	if not histo_show:
+		frame.draw()
+		gps_radar.draw(tele.i.gpsHdng, tele.i.gpsSpd)
+		cross.draw()
+		left_pwm_graph.draw(tele.o.l_trq)
+		right_pwm_graph.draw(tele.o.r_trq)
+		left_torque_graph.draw(tele.i.motLC)
+		right_torque_graph.draw(tele.i.motRC)
+		lateral_acc_graph.draw(tele.i.accY)
+
 	pygame.display.flip()
 
 	# wait 1/x seconds
@@ -154,5 +163,8 @@ while True:
 		clock.tick(25)
 	else:
 		clock.tick(100)
+
+	if not tele.connected: 
+		sys.exit(-1)
 
 # the end
