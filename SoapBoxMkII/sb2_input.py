@@ -28,12 +28,12 @@ class inputData():
 		""" Holds all the necessary system input data """
 
 		# joystick data:
-		self.jsX = 0 # Joystick X coordenate [-1..1].
-		self.jsY = 0 # Joystick Y coordenate [-1..1].
+		self.jsX = 0.0 # Joystick X coordenate [-1..1].
+		self.jsY = 0.0 # Joystick Y coordenate [-1..1].
 		self.jsB1 = 0 # Joystick Button 1 state [0, 1].
 		self.jsB2 = 0 # Joystick Button 2 state [0, 1].
-		self.jsHatX = 0 # Joystick Hat X state [-1, 0, 1].
-		self.jsHatY = 0 # Joystick Hat Y state [-1, 0, 1].
+		self.jsHatX = 0.0 # Joystick Hat X state [-1, 0, 1].
+		self.jsHatY = 0.0 # Joystick Hat Y state [-1, 0, 1].
 		self.failed_j = False # Fail Flag for Joystick Input.
 
 		# accelerometer data:
@@ -52,6 +52,10 @@ class inputData():
 		self.failed_l = False # Fail Flag for Left Motor Input.
 		self.motRC = 0.0 # Right Motor Current [A].
 		self.failed_r = False # Fail Flag for Right Motor Input.
+		self.brgLT = 0 # Left Bridge Temperature [C].
+		self.brgRT = 0 # Right Bridge Temperature [C].
+		self.batLV = 0.0 # Left Battery Voltage [V].
+		self.batRV = 0.0 # Right Battery Voltage [V].
 
 		# failure data:
 		self.failed = False # Generic Fail Flag for Input.
@@ -81,17 +85,21 @@ class inputData():
 		# motor bridge data:
 		self.motLC = 20 - (self.seed * 40) # -20..20
 		self.motRC = (self.seed * 40) - 20 # -20..20
-
+		self.brgLT = 10 + int(self.seed * 40) # 10..50
+		self.brgRT = 50 - self.brgLT # 10..50
+		self.batLV = 22 + int(self.seed * 8) # 22..30
+		self.batRV = 30 - (self.batLV - 22) # 22..30
 
 	def serialize(self):
 
 		""" grabs all the data fields and stuffs them into a string for network communications """
 
-		return struct.pack("ffbbffffffbbbbbbb",
+		return struct.pack("ff??ffffff???????ffiiff",
 		self.jsX, self.jsY, self.jsB1, self.jsB2, self.jsHatX, self.jsHatY,
 		self.accX, self.accY,
 		self.gpsSpd, self.gpsHdng, self.gpsVld,
-		self.failed, self.failed_j, self.failed_a, self.failed_g, self.failed_r, self.failed_l)
+		self.failed, self.failed_j, self.failed_a, self.failed_g, self.failed_r, self.failed_l,
+		self.motLC, self.motRC, int(self.brgRT), int(self.brgLT), self.batRV, self.batLV)
 
 	def deserialize(self, stream):
 
@@ -100,8 +108,31 @@ class inputData():
 		(self.jsX, self.jsY, self.jsB1, self.jsB2, self.jsHatX, self.jsHatY,
 		self.accX, self.accY,
 		self.gpsSpd, self.gpsHdng, self.gpsVld,
-		self.failed, self.failed_j, self.failed_a, self.failed_g, self.failed_r, self.failed_l) = \
-		struct.unpack("ffbbffffffbbbbbbb", stream)
+		self.failed, self.failed_j, self.failed_a, self.failed_g, self.failed_r, self.failed_l,
+		self.motLC, self.motRC, self.brgRT, self.brgLT, self.batRV, self.batLV) = \
+		struct.unpack("ff??ffffff???????ffiiff", stream)
+
+	def log(self):
+
+		""" grabs all the data fields and returns them in a string """
+
+		return "{0:.2f}".format(self.jsX) + ";" + "{0:.2f}".format(self.jsY) + ";" + \
+		"{0:d}".format(self.jsB1) + ";" + "{0:d}".format(self.jsB2) + ";" + \
+		"{0:.2f}".format(self.jsHatX) + ";" + "{0:.2f}".format(self.jsHatY) + ";" + \
+		"{0:.2f}".format(self.accX) + ";" + "{0:.2f}".format(self.accY) + ";" + \
+		"{0:.2f}".format(self.gpsSpd) + ";" + "{0:.2f}".format(self.gpsHdng) + ";" + "{0:d}".format(self.gpsVld) + ";" + \
+		"{0:d}".format(self.failed) + ";" + "{0:d}".format(self.failed_j) + ";" + "{0:d}".format(self.failed_a) + ";" + \
+		"{0:d}".format(self.failed_g) + ";" + "{0:d}".format(self.failed_r) + ";" + "{0:d}".format(self.failed_l) + ";" + \
+		"{0:.2f}".format(self.motLC) + ";" + "{0:.2f}".format(self.motRC) + ";" + \
+		"{0:d}".format(self.brgRT) + ";" + "{0:d}".format(self.brgLT) + ";" + \
+		"{0:.2f}".format(self.batRV) + ";" + "{0:.2f}".format(self.batLV) + ";"
+
+	def logHeader(self):
+
+		""" returns the names of all the data fields """
+
+		return "jsX;jsY;jsB1;jsB2;jsHatX;jsHatY;accX;accY;gpsSpd;gpsHdng;gpsVld;failed;\
+failed_j;failed_a;failed_g;failed_r;failed_l;motLC;motRC;brgRT;brgLT;batRV;batLV;"
 
 # This is a simple test routine that only runs if this module is 
 # called directly with "python sb2_input.py"
@@ -112,4 +143,6 @@ if __name__ == '__main__':
 	a = i.serialize()
 	print len(a)
 	i.deserialize(a)
-	
+	print i.logHeader()
+	print i.log()
+
