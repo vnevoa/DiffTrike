@@ -5,6 +5,7 @@ sudo sysctl -w net.ipv4.ip_forward=1
 # On the GTA02...
 # Flash a recent kernel and rootfs from "SHR-unstable" distro, using "dfu-util".
 #  Boot it up and log in via SSH.
+# if networking isn't working, try "route add default gateway 192.168.5.200"
 
 # remove all unnecessary software (must do!):
 opkg remove --force-removal-of-dependent-packages xserver*
@@ -13,23 +14,12 @@ opkg remove --force-removal-of-dependent-packages xf86*
 opkg remove --force-removal-of-dependent-packages shr*
 opkg remove --force-removal-of-dependent-packages fso*
 opkg remove --force-removal-of-dependent-packages phone*
+opkg remove apmd
 
 ## Theses kernel modules are not necessary and should never be loaded (rename or delete them):
-rm /lib/modules/*/kernel/net/bluetooth/hidp/hidp.ko
-rm /lib/modules/*/kernel/net/bluetooth/l2cap.ko
-rm /lib/modules/*/kernel/net/bluetooth/rfcomm/rfcomm.ko
-rm /lib/modules/*/kernel/net/bluetooth/bluetooth.ko
-rm /lib/modules/*/kernel/sound/soc/snd-soc-core.ko
-rm /lib/modules/*/kernel/sound/soc/codecs/snd-soc-wm8753.ko
-rm /lib/modules/*/kernel/sound/soc/s3c24xx/snd-soc-s3c24xx.ko
-rm /lib/modules/*/kernel/sound/soc/s3c24xx/snd-soc-s3c24xx-i2s.ko
-rm /lib/modules/*/kernel/sound/soc/s3c24xx/snd-soc-neo1973-wm8753.ko
-rm /lib/modules/*/kernel/sound/core/snd-page-alloc.ko
-rm /lib/modules/*/kernel/sound/core/snd-pcm.ko
-rm /lib/modules/*/kernel/sound/core/snd.ko
-rm /lib/modules/*/kernel/sound/core/snd-timer.ko
-rm /lib/modules/*/kernel/sound/soundcore.ko
-rm /lib/modules/*/kernel/drivers/bluetooth/btusb.ko
+rm /etc/modutils/snd-soc-*
+rm /etc/modutils/ipv6
+update-modules
 
 # configure networking:
 sed -i 's/192.168.0/192.168.5/' /etc/network/interfaces
