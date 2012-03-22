@@ -46,22 +46,22 @@ def handler(signum, frame):
 def getstruct():
 	""" Serializes current input and output data and makes them available for telemetry, for example. """
 	sync.acquire()
-	return i.serialize() + o.serialize()
+	inp = i.serialize()
+	outp = o.serialize()
+	data = inp + outp
+	#print "Send ", len(inp), "+", len(outp), "=", len(data)
+	return data
 
 # "Application alive" LED blinker
 def blinkled():
-	""" Blinkled function: blinks the red LED according to specification """
+	""" Blinkled function: blinks the red LED """
 	global ongoing
-	global failed
 	red = open('/sys/devices/platform/leds-gpio/leds/gta02:red:aux/brightness', 'w', 0)
 	toggle = 0
 	while ongoing:
 		toggle ^= 1
 		red.write(str(toggle*255))
-		if failed:
-			time.sleep(0.1)
-		else:
-			time.sleep(0.5)
+		time.sleep(0.25)
 	red.write("0")
 	red.close()
 
@@ -125,8 +125,6 @@ print "Init=%0.3fs. Entering control loop." % (t1 - t0)
 t_1 = t1
 while ongoing:
 
-	pygame.event.pump()
-
 	t0 = time.time()
 
 	#########################
@@ -134,42 +132,41 @@ while ongoing:
 	#########################
 
 	# read joystick:
+	pygame.event.pump() # this is essential for joystick updates.
 	try:
-		if not i.failed_j:
-			i.jsX, i.jsY = stick.getXY()
-			#io.jsB1, io.jsB2 = stick.getButtons()
+		i.jsB1, i.jsB2 = stick.getButtons(2)
+#		if i.jsB1: # button 1 as dead man's switch.
+		i.jsX, i.jsY = stick.getXY()
+#		else:
+#			i.jsX = i.jsY = 0.0
 	except:
 		i.failed_j = True
 
-	# read left motor:
+	# read left bridge:
 	try:
-		if not i.failed_l:
-			i.motLC = leftM.getCurrent()
+		i.motLC = leftM.getCurrent()
+		i.batLV = leftM.getVoltage()
 	except:
-	#	i.failed_l = True
-		pass
+		i.failed_l = True
 
-	# read right motor:
+	# read right bridge:
 	try:
-		if not i.failed_r:
-			i.motRC = rightM.getCurrent()
+		i.motRC = rightM.getCurrent()
+		i.batRV = leftR.getVoltage()
 	except:
-	#	i.failed_r = True
-		pass
+		i.failed_r = True
 
 	# read lateral accelerometer:
 	try:
-		if not i.failed_a:
-			i.accY = accel1.getY()
-			i.accX = accel1.getX()
+		i.accY = accel1.getY()
+		i.accX = accel1.getX()
 	except:
 		i.failed_a = True
 
 	# read Gps:
 	try:
-		if not i.failed_g:
-			i.gpsVld = gps.isValid()
-			(i.gpsSpd, i.gpsHdng) = gps.getVelocity()
+		i.gpsVld = gps.isValid()
+		(i.gpsSpd, i.gpsHdng) = gps.getVelocity()
 	except:
 		i.failed_g = True
 
@@ -181,20 +178,15 @@ while ongoing:
 	# process data
 	############################
 
-	if i.failed or o.failed:
-		failed = True
-		o.r_trq = 0
-		o.l_trq = 0
-	else:
-		failed = False
-		# simple direct mapping...
-		o.r_trq  = -i.jsY - i.jsX
-		o.r_trq = min(o.r_trq, 1)
-		o.r_trq = max(o.r_trq, 0)
-		# simple direct mapping...
-		o.l_trq = -i.jsY + i.jsX
-		o.l_trq = min(o.l_trq, 1)
-		o.l_trq = max(o.l_trq, 0)
+	failed = False
+	# simple direct mapping...
+	o.r_trq  = -i.jsY - i.jsX
+	o.r_trq = min(o.r_trq, 1.0)
+	o.r_trq = max(o.r_trq, -1.0)
+	# simple direct mapping...
+	o.l_trq = -i.jsY + i.jsX
+	o.l_trq = min(o.l_trq, 1.0)
+	o.l_trq = max(o.l_trq, -1.0)
 
 	t2 = time.time()
 
@@ -205,34 +197,24 @@ while ongoing:
 	#print "RT=%0.3f LT=%0.3f" % (o.l_trq, o.r_trq)
 
 	# write left motor:
+	leftLed.write( str(int(255*(0.5+o.l_trq/2.0))) )
 	try:
-		if not o.failed_l:
-			leftM.setTorque(o.l_trq)
+		leftM.setTorque(o.l_trq)
 	except:
 		o.failed_l = True
-		print "Failed l.setTorque(%0.3f)" % (o.l_trq)
+		o.glitches_l += 1
+		#print "Failed l.setTorque(%0.3f)" % (o.l_trq)
 
 	# write right motor:
+	rightLed.write( str(int(255*(0.5+o.r_trq/2.0))) )
 	try:
-		if not o.failed_r:
-			rightM.setTorque(o.r_trq)
+		rightM.setTorque(o.r_trq)
 	except:
 		o.failed_r = True
-		print "Failed r.setTorque(%0.3f)" % (o.r_trq)
+		o.glitches_r += 1
+		#print "Failed r.setTorque(%0.3f)" % (o.r_trq)
 
-	# fail safe mode:
 	o.failed = o.failed_r or o.failed_l
-	if i.failed:
-		leftLed.write("20")
-		rightLed.write("20")
-	if o.failed_r:
-		rightLed.write("255")
-		if not o.failed_l:
-			leftM.setTorque(0)
-	if o.failed_l:
-		leftLed.write("255")
-		if not o.failed_r:
-			rightM.setTorque(0)
 
 	t3 = time.time()
 
@@ -253,8 +235,13 @@ while ongoing:
 	time.sleep(0.010)
 
 # exited control loop, clean up
+leftLed.write("0")
+leftLed.close()
+rightLed.write("0")
+leftLed.close()
 
 # stop telemetry server
 t.stop()
 time.sleep(1)
+print "Exited."
 
