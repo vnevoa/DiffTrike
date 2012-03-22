@@ -101,55 +101,71 @@ class Crosshair():
 class Bargraph():
 	"""draws a bar graph"""
 
-	def __init__(self, bg, place, lims=(-1,1), size=(50,250), color=(128,128,128)):
+	def __init__(self, bg, name, place, lims=(-1,1), size=(50,250), color=(128,128,128)):
 		self.bg = bg
-		self.size = size
-		self.place = place
+		self.x = place[0]
+		self.y = place[1]
+		self.w = size[0]
+		self.h = size[1]
+		self.name = Text(name, self.x, self.y + self.h - 10)
 		self.color = color
 		self.lims = lims
-		self.mult = lims[1] - lims[0]
+		self.mult = 1.0 * lims[1] - lims[0] # making sure it is float.
 
 	def draw(self, value):
-		x = self.place[0]
-		y = self.place[1]
-		width =  self.size[0]
-		height = self.size[1]
 		# erase the whole area:
-		pygame.draw.rect( self.bg.sf, self.bg.color, (x, y, width, height), 0)
-		# write value text:
-		txt = Text(format(value,"0.2f"), x, y)
+		pygame.draw.rect( self.bg.sf, self.bg.color, (self.x, self.y, self.w, self.h), 0)
+		# write value text at top:
+		if (value < self.lims[0]):
+			value = self.lims[0]
+			txt = Text("<" + format(value,"0.2f"), self.x, self.y)
+		elif (value > self.lims[1]):
+			value = self.lims[1]
+			txt = Text(">" + format(value,"0.2f"), self.x, self.y)
+		else:
+			txt = Text(format(value,"0.2f"), self.x, self.y)
 		self.bg.sf.blit(txt.sf, (txt.x, txt.y))
 		(h, v) = txt.sf.get_size()
-		# draw the border:
-		pygame.draw.rect( self.bg.sf, self.color, (x, y+v, width, height), 1)
-		# draw the filling:
+		# write name text at bottom:
+		self.bg.sf.blit(self.name.sf, (self.name.x, self.name.y))
+		(h1, v1) = self.name.sf.get_size()
+		# draw the border in between texts:
+		pygame.draw.rect(self.bg.sf, self.color, (self.x, self.y+v, self.w, self.h-v-v1), 1)
+		# draw the filling inside the border:
 		fillfactor = (value - self.lims[0]) / self.mult
-		if (height >= width):
-			y = self.place[1]+(1-fillfactor)*self.size[1]
-			height = fillfactor*self.size[1]
-		else:
-			x = self.place[0]+(1-fillfactor)*self.size[0]
-			width = fillfactor*self.size[0]
-		pygame.draw.rect( self.bg.sf, self.color, (x, y+v, width, height), 0)
+		if (self.h >= self.w): # vertical bar
+			x = self.x
+			y = self.y + v + (1-fillfactor)*(self.h-v-v1)
+			w = self.w
+			h = fillfactor*(self.h-v-v1)
+		else:                 # horizontal bar
+			x = self.x
+			y = self.y + v
+			w = fillfactor*self.w
+			h = self.h-v-v1
+		pygame.draw.rect( self.bg.sf, self.color, (x, y, w, h), 0)
 
 
 class Azimuth():
 	"""draws an azimuth circle"""
 
-	def __init__(self, bg, place=(0,0), size=25, color=(0,255,0)):
+	def __init__(self, bg, name, place=(0,0), size=25, color=(0,255,0)):
 		self.bg = bg
 		self.centre = place
 		self.color = color
 		self.r = size
+		self.name = Text(name, place[0]-size, place[1]+size-10)
 
 	def draw(self, deg, vel):
 		# tell speed:
 		txt = Text(format(vel,"0.2f"), self.centre[0], self.centre[1] - self.r - 20)
 		self.bg.sf.blit(txt.sf, (txt.x, txt.y))
 		# tell heading:
-		pygame.draw.circle(self.bg.sf, self.color, self.centre, self.r, 1)
+		pygame.draw.circle(self.bg.sf, self.color, self.centre, int(self.r), 1)
 		rad = math.radians(deg)
 		p = (self.centre[0] + self.r * math.sin(rad), self.centre[1] - self.r * math.cos(rad))
 		pygame.draw.line(self.bg.sf, self.color, self.centre, p)
+		# show name:
+		self.bg.sf.blit(self.name.sf, (self.name.x, self.name.y))
 
 
