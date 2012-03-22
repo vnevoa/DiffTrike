@@ -27,6 +27,7 @@ import i2c_lib
 REG_COMMAND = 0
 REG_STATUS = 1
 REG_PWM = 2
+REG_DIRECTION = 3
 REG_TEMPERATURE = 4
 REG_CURRENT = 5
 REG_BAT_VOLTAGE = 6
@@ -49,15 +50,43 @@ class I2CMotorBridge():
 	def getTemperature(self):
 		self.device.seek(REG_TEMPERATURE)
 		(t,) = struct.unpack('B', self.device.read(1))
-		return t # Celsius
+		return (t/10.0) # Celsius
 
 	def getVoltage(self):
 		self.device.seek(REG_BAT_VOLTAGE)
 		(v,) = struct.unpack('B', self.device.read(1))
 		return ((v + 100) / 10.0) # Volt
 
-	def setTorque(self, desired): # [0..1]
-		self.device.write(REG_PWM, int(desired*255)) # PWM duty cycle, 0-255
+	def setTorque(self, desired): # [-1..1]
+		if desired < 0.0:
+			self.device.write(REG_DIRECTION, 0)
+			desired = -desired
+		else:
+			self.device.write(REG_DIRECTION, 1)
+			#print "t.in=%0.2f t.out=%d" % (desired, int(desired*255))
+		self.device.write(REG_PWM, int(desired*255.0)) # PWM duty cycle, 0-255
+
+def init(motor):
+	ok = True
+	try:
+		t0 = time.time()
+		motor.setTorque(0)
+		t1 = time.time()
+		print " Write=%0.1fms" % (1000*(t1-t0))
+	except:
+		ok = False
+		t1 = time.time()
+		print " Write=failed (%0.1fms)" % (1000*(t1-t0))
+	try:
+		t0 = time.time()
+		motor.getRawData()
+		t1 = time.time()
+		print " Read=%0.1fms" % (1000*(t1-t0))
+	except:
+		ok = False
+		t1 = time.time()
+		print " Read=failed (%0.1fms)" % (1000*(t1-t0))
+	return ok
 
 # This is a simple test routine that only runs if this module is 
 # called directly with "python sb2_motor.py"
@@ -65,50 +94,31 @@ class I2CMotorBridge():
 if __name__ == '__main__':
 
 	m1 = I2CMotorBridge('/dev/i2c-0', 0x22)
+	m1ok = True
 	m2 = I2CMotorBridge('/dev/i2c-0', 0x23)
+	m2ok = True
+
+	m1ok = init(m1)
+	m2ok = init(m2)
+
+	pmin = 0
+	pmax = 200
 
 	while True:
 
-		print "Motor 1:"
+		print "cycle up..."
+		for i in range(pmin, pmax):
+			#print "i=%d" % i
+			if m1ok: m1.setTorque(i/255.0)
+			if m2ok: m2.setTorque(i/255.0)
+			time.sleep(0.01)
+		print "temp=%d C" % m1.getTemperature()
 
-		try:
-			t0 = time.time()
-			m1.setTorque(0)
-			t1 = time.time()
-			print " Write=%0.1fms" % (1000*(t1-t0))
-		except:
-			t1 = time.time()
-			print " Write=failed (%0.1fms)" % (1000*(t1-t0))
+		print "cycle down..."
+		for i in range(pmin, pmax):
+			#print "i=%d" % i
+			if m1ok: m1.setTorque(-i/255.0)
+			if m2ok: m2.setTorque(-i/255.0)
+			time.sleep(0.01)
+		print "temp=%d C" % m2.getTemperature()
 
-		try:
-			t0 = time.time()
-			m1.getRawData()
-			t1 = time.time()
-			print " Read=%0.1fms" % (1000*(t1-t0))
-		except:
-			t1 = time.time()
-			print " Read=failed (%0.1fms)" % (1000*(t1-t0))
-
-		print "Motor 2:"
-
-                try:
-                    	t0 = time.time()
-                        m2.setTorque(0)
-                        t1 = time.time()
-                        print " Write=%0.1fms" % (1000*(t1-t0))
-                except:
-                       	t1 = time.time()
-                        print " Write=failed (%0.1fms)" % (1000*(t1-t0))
-
-                try:
-                        t0 = time.time()
-                        m2.getRawData()
-                        t1 = time.time()
-                        print " Read=%0.1fms" % (1000*(t1-t0))
-                except:
-                        t1 = time.time()
-                        print " Read=failed (%0.1fms)" % (1000*(t1-t0))
-
-                print ""
-
-		time.sleep(0.5)
