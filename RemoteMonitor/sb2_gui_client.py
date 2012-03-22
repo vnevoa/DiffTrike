@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 
 #    Copyright 2011 Vasco Nevoa.
 #
@@ -29,7 +29,7 @@ import sb2_gui_data, sb2_gui_widgets
 from pygame.locals import * 
 from pygame.gfxdraw import *
 
-# parse commannd line arguments:
+# parse command line arguments:
 testing = False
 try:
 	opts, args = getopt.getopt(sys.argv[1:], "t")
@@ -43,16 +43,35 @@ for o, a in opts:
 
 # do initializations:
 pygame.init()
-log = sb2_gui_data.FileLog("gui.log")
+
 bg = sb2_gui_widgets.Window()
-frame = sb2_gui_widgets.Sights(bg, 100)
+
+horiz_divs = 10
+vert_divs = 5
+
+# centre widgets:
+frame = sb2_gui_widgets.Sights(bg, 0.75*bg.width/horiz_divs)
 cross = sb2_gui_widgets.Crosshair(bg)
-gps_radar = sb2_gui_widgets.Azimuth(bg, (bg.width/2, 2 * bg.height/7), frame.size/2)
-left_pwm_graph = sb2_gui_widgets.Bargraph(bg, (bg.width/2 - frame.size/2 - 100, bg.height/2 - frame.size/2 - 150), (-1,1))
-right_pwm_graph = sb2_gui_widgets.Bargraph(bg, (bg.width/2 + frame.size/2 + 50, bg.height/2 - frame.size/2 - 150), (-1,1))
-left_torque_graph = sb2_gui_widgets.Bargraph(bg, (bg.width/2 - frame.size/2 - 200, bg.height/2 - frame.size/2 - 150), (-20,20), (50, 250), (0,0,200))
-right_torque_graph = sb2_gui_widgets.Bargraph(bg, (bg.width/2 + frame.size/2 + 150, bg.height/2 - frame.size/2 - 150), (-20,20), (50, 250), (0,0,200))
-lateral_acc_graph = sb2_gui_widgets.Bargraph(bg, (bg.width/2 - frame.size, bg.height/2 + frame.size/2 + 50), (-2.5, 2.5), (frame.size*2, 50), (128,0,0))
+gps_radar = sb2_gui_widgets.Azimuth(bg, "GPS", (bg.width/2, 2 * bg.height/7), frame.size/2)
+
+# left widgets:
+left_batt_level = sb2_gui_widgets.Bargraph(bg, "Ubat [V]", (bg.width/horiz_divs -25, bg.height/vert_divs), (12, 36), (30, 2*bg.height/vert_divs), (0, 100, 0))
+left_temp_graph = sb2_gui_widgets.Bargraph(bg, "T [C]", (2*bg.width/horiz_divs -25, bg.height/vert_divs), (10, 50), (25, 2*bg.height/vert_divs), (200, 0, 50))
+left_torque_graph = sb2_gui_widgets.Bargraph(bg, "I [A]", (3*bg.width/horiz_divs -25, bg.height/vert_divs), (0, 20), (50, 2*bg.height/vert_divs), (0,0,200))
+left_pwm_graph = sb2_gui_widgets.Bargraph(bg, "PWM", (4*bg.width/horiz_divs -25, bg.height/vert_divs), (-1, 1), (50, 2*bg.height/vert_divs))
+
+# right widgets:
+right_pwm_graph = sb2_gui_widgets.Bargraph(bg, "PWM", (6*bg.width/horiz_divs -25, bg.height/vert_divs), (-1,1), (50, 2*bg.height/vert_divs))
+right_torque_graph = sb2_gui_widgets.Bargraph(bg, "I [A]", (7*bg.width/horiz_divs -25, bg.height/vert_divs), (0,20), (50, 2*bg.height/vert_divs), (0,0,200))
+right_temp_graph = sb2_gui_widgets.Bargraph(bg, "T [C]", (8*bg.width/horiz_divs -25, bg.height/vert_divs), (10, 50), (25, 2*bg.height/vert_divs), (200, 0, 50))
+right_batt_level = sb2_gui_widgets.Bargraph(bg, "Ubat [V]", (9*bg.width/horiz_divs -25, bg.height/vert_divs), (12, 36), (30, 2*bg.height/vert_divs), (0, 100, 0))
+
+# bottom widgets:
+lateral_acc_graph = sb2_gui_widgets.Bargraph(bg, "Lat.Acc. [G]", (bg.width/2 - frame.size, 3.5*bg.height/vert_divs), (-2.5, 2.5), (frame.size*2, 50), (0,200,0))
+
+
+# data objects:
+log = sb2_gui_data.FileLog("datalog.csv")
 clock = pygame.time.Clock()
 stick = sb2_gui_data.Joystick()
 timer_histo = sb2_gui_data.Histogram()
@@ -66,6 +85,7 @@ if testing:
 	tele = sb2_gui_data.DummyTelemetry()
 else:
 	tele = sb2_gui_data.Telemetry("192.168.5.202", 11000)
+log.write(tele.i.logHeader() + tele.o.logHeader() + "\n")
 
 # event loop:
 while True: 
@@ -101,8 +121,8 @@ while True:
 		timer_histo.inc("%0.1f" % (1000 * tc))
 		total_histo.inc("%0.1f" % (1000 * (ti+tp+to)))
 
-	# dump all data to file in binary format.
-	log.write(tele.i.serialize() + tele.o.serialize())
+	# dump all data to file in TEXT format.
+	log.write(tele.i.log() + tele.o.log() + "\n")
 
 	if paused:
 		clock.tick(25)
@@ -110,7 +130,8 @@ while True:
 
     # update screen:
 
-	(hs, vs1) = bg.write("connection glitches = %d" % tele.glitches, 10, 10)
+	(hs, vs) = bg.write("packet errors = %d; bandwidth = %0.1f kb/s" % (tele.glitches, tele.bw), 10, 10)
+	(hs, vs1) = bg.write("i2c glitches: right=%d, left=%d" % (tele.o.glitches_r, tele.o.glitches_l), 10, vs+10)
 
 	if histo_show:  # show only histograms...
 
@@ -147,24 +168,33 @@ while True:
 	bg.redraw()
 
 	if not histo_show:
-		frame.draw()
-		gps_radar.draw(tele.i.gpsHdng, tele.i.gpsSpd)
-		cross.draw()
-		left_pwm_graph.draw(tele.o.l_trq)
-		right_pwm_graph.draw(tele.o.r_trq)
+
+		left_temp_graph.draw(tele.i.brgLT)
 		left_torque_graph.draw(tele.i.motLC)
-		right_torque_graph.draw(tele.i.motRC)
+		left_pwm_graph.draw(tele.o.l_trq)
+		left_batt_level.draw(tele.i.batLV)
+
+		if not tele.i.failed_j:
+			frame.draw()
+			cross.draw()
+		if tele.i.gpsVld:
+			gps_radar.draw(tele.i.gpsHdng, tele.i.gpsSpd)
 		lateral_acc_graph.draw(tele.i.accY)
+
+		right_pwm_graph.draw(tele.o.r_trq)
+		right_torque_graph.draw(tele.i.motRC)
+		right_temp_graph.draw(tele.i.brgRT)
+		right_batt_level.draw(tele.i.batRV)
 
 	pygame.display.flip()
 
 	# wait 1/x seconds
-	if fresh_data:
-		clock.tick(25)
-	else:
-		clock.tick(100)
+	clock.tick(25)
 
 	if not tele.connected: 
 		sys.exit(-1)
+
+	if testing:
+		paused = True
 
 # the end
