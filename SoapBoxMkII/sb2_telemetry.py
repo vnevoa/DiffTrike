@@ -22,7 +22,7 @@
 #
 
 import SocketServer
-import thread
+import thread, struct
 
 datafunc = None
 
@@ -30,10 +30,15 @@ class MyTCPHandler(SocketServer.BaseRequestHandler):
 
 	def handle(self):
 		global datafunc
+		print "Got new IP client."
 		try:
-			while self.request.send(datafunc()): pass
+			ok = True
+			while ok:
+				payload = datafunc()
+				header = struct.pack("H", len(payload))
+				ok = self.request.send(header + payload)
 		except:
-			pass
+			print "Lost IP client!"
 
 
 class MyTcpServer():
