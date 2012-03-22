@@ -41,8 +41,8 @@ class I2CSlave():
 	def read(self, bytes):
 		return self.file.read(bytes)
 
-        def seek(self, register):
-                self.file.write(struct.pack('B', register))
+	def seek(self, register):
+		self.file.write(struct.pack('B', register))
 
 	def write(self, register, data):
 		self.file.write(struct.pack('BB', register, data))
