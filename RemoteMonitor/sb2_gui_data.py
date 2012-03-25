@@ -64,6 +64,7 @@ class Telemetry():
 			self.sock.settimeout(5.0)
 			try:
 				self.sock.connect((self.host, self.port))
+				print "Connected."
 				self.connected = 1
 				self.bytes_rx = 0
 				self.bytes_tx = 0
@@ -96,8 +97,7 @@ class Telemetry():
 			except:
 				self.connected = 0
 				self.sock.close()
-				print "Socket was lost!"
-				time.sleep(1)
+				print "Connection lost!"
 
 	def timer(self):
 		while True:
