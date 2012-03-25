@@ -48,8 +48,6 @@ class Telemetry():
 		self.port = port
 		self.connected = 0
 		self.fresh = 0
-		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		self.sock.settimeout(6.0)
 		self.i = sb2_input.inputData()
 		self.o = sb2_output.outputData()
 		self.a = 0
@@ -61,41 +59,45 @@ class Telemetry():
 		thread.start_new_thread(self.timer, ())
 
 	def receive(self):
-		try:
-			self.sock.connect((self.host, self.port))
-			self.connected = 1
-			self.bytes_rx = 0
-			self.bytes_tx = 0
-			bytes_i = len(self.i.serialize())
-			bytes_o = len(self.o.serialize())
-			payload_len = bytes_i + bytes_o
-			while True:
-                # read byte bursts from socket, reassemble packet if needed
-				packet = ""
-				actual_len = 0
-				packet_len = 0
-				(packet_len,) = struct.unpack("H", self.sock.recv(2)) # read fixed length header
-				while (actual_len < packet_len):
-					burst = self.sock.recv(packet_len - actual_len)   # read (partial?) burst
-					packet += burst    # assemble payload
-					actual_len += len(burst)
-				self.bytes_rx += actual_len
-                # if not valid packet length, ignore and continue:
-				if (actual_len != payload_len):
-					self.glitches += 1
-					print "Socket got ", actual_len, ", expected ", packet_len 
-					continue # discard data packet.
-                # looks good, unmarshal payload:
-				self.t_1 = self.t
-				self.t = time.time()
-				self.blackout_histo.inc(int(1000 * (self.t - self.t_1)))
-				self.i.deserialize(packet[0:bytes_i])
-				self.o.deserialize(packet[bytes_i:bytes_i+bytes_o])
-				self.fresh = 1
-		except:
-			self.connected = 0
-			self.sock.close()
-			print "Socket was lost!"
+		while True:
+			self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			self.sock.settimeout(5.0)
+			try:
+				self.sock.connect((self.host, self.port))
+				self.connected = 1
+				self.bytes_rx = 0
+				self.bytes_tx = 0
+				bytes_i = len(self.i.serialize())
+				bytes_o = len(self.o.serialize())
+				payload_len = bytes_i + bytes_o
+				while True:
+				# read byte bursts from socket, reassemble packet if needed
+					packet = ""
+					actual_len = 0
+					packet_len = 0
+					(packet_len,) = struct.unpack("H", self.sock.recv(2)) # read fixed length header
+					while (actual_len < packet_len):
+						burst = self.sock.recv(packet_len - actual_len)   # read (partial?) burst
+						packet += burst    # assemble payload
+						actual_len += len(burst)
+					self.bytes_rx += actual_len
+					# if not valid packet length, ignore and continue:
+					if (actual_len != payload_len):
+						self.glitches += 1
+						print "Socket got ", actual_len, ", expected ", packet_len 
+						continue # discard data packet.
+					# looks good, unmarshal payload:
+					self.t_1 = self.t
+					self.t = time.time()
+					self.blackout_histo.inc(int(1000 * (self.t - self.t_1)))
+					self.i.deserialize(packet[0:bytes_i])
+					self.o.deserialize(packet[bytes_i:bytes_i+bytes_o])
+					self.fresh = 1
+			except:
+				self.connected = 0
+				self.sock.close()
+				print "Socket was lost!"
+				time.sleep(1)
 
 	def timer(self):
 		while True:
