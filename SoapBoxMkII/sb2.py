@@ -31,7 +31,6 @@ import pygame
 #### global flags
 
 global ongoing
-global failed
 
 #### local functions ####
 
@@ -62,7 +61,7 @@ def blinkled():
 		toggle ^= 1
 		red.write(str(toggle*255))
 		time.sleep(0.25)
-	red.write("0")
+	red.write("254")
 	red.close()
 
 ######################################
@@ -74,7 +73,6 @@ def blinkled():
 print "Starting initializations."
 t0 = time.time()
 ongoing = True
-failed = False
 i = sb2_input.inputData()
 o = sb2_output.outputData()
 sync = thread.allocate_lock()
@@ -94,6 +92,7 @@ sync.acquire()
 ######################################
 
 # connect to the usb joystick:
+j_exp_x = j_exp_y = 2.0 # dampening exponent for axis readings.
 pygame.init()
 stick = sb2_joystick.Joystick(0)
 
@@ -132,6 +131,7 @@ while ongoing:
 	#########################
 
 	# read joystick:
+	i.failed_j = False
 	pygame.event.pump() # this is essential for joystick updates.
 	try:
 		i.jsB1, i.jsB2 = stick.getButtons(2)
@@ -143,6 +143,7 @@ while ongoing:
 		i.failed_j = True
 
 	# read left bridge:
+	i.failed_l = False
 	try:
 		i.motLC = leftM.getCurrent()
 		i.batLV = leftM.getVoltage()
@@ -150,13 +151,14 @@ while ongoing:
 		i.failed_l = True
 
 	# read right bridge:
+	i.failed_r = False
 	try:
 		i.motRC = rightM.getCurrent()
 		i.batRV = leftR.getVoltage()
 	except:
-		i.failed_r = True
 
 	# read lateral accelerometer:
+	i.failed_a = False
 	try:
 		i.accY = accel1.getY()
 		i.accX = accel1.getX()
@@ -164,6 +166,7 @@ while ongoing:
 		i.failed_a = True
 
 	# read Gps:
+	i.failed_g = False
 	try:
 		i.gpsVld = gps.isValid()
 		(i.gpsSpd, i.gpsHdng) = gps.getVelocity()
@@ -178,15 +181,21 @@ while ongoing:
 	# process data
 	############################
 
-	failed = False
-	# simple direct mapping...
-	o.r_trq  = -i.jsY - i.jsX
-	o.r_trq = min(o.r_trq, 1.0)
-	o.r_trq = max(o.r_trq, -1.0)
-	# simple direct mapping...
-	o.l_trq = -i.jsY + i.jsX
+	# Apply exponential filter to joystick axes.
+	x = abs(i.jsX) ** j_exp_x
+	if (i.jsX < 0.0): x = -x
+	y = abs(i.jsY) ** j_exp_y
+	if (i.jsY > 0.0): y = -y     # Y comes inverted from joystick.
+
+	# Left: simple mapping...
+	o.l_trq = y + x 
 	o.l_trq = min(o.l_trq, 1.0)
 	o.l_trq = max(o.l_trq, -1.0)
+
+	# Right: simple mapping...
+	o.r_trq  = y - x
+	o.r_trq = min(o.r_trq, 1.0)
+	o.r_trq = max(o.r_trq, -1.0)
 
 	t2 = time.time()
 
@@ -196,8 +205,10 @@ while ongoing:
 
 	#print "RT=%0.3f LT=%0.3f" % (o.l_trq, o.r_trq)
 
+	if not i.failed_j: leftLed.write( str(1+int(253*(0.5+o.l_trq/2.0))) )
+
 	# write left motor:
-	leftLed.write( str(int(255*(0.5+o.l_trq/2.0))) )
+	o.failed_l = False
 	try:
 		leftM.setTorque(o.l_trq)
 	except:
@@ -205,8 +216,10 @@ while ongoing:
 		o.glitches_l += 1
 		#print "Failed l.setTorque(%0.3f)" % (o.l_trq)
 
+	if not i.failed_j: rightLed.write( str(1+int(253*(0.5+o.r_trq/2.0))) )
+
 	# write right motor:
-	rightLed.write( str(int(255*(0.5+o.r_trq/2.0))) )
+	o.failed_r = False
 	try:
 		rightM.setTorque(o.r_trq)
 	except:
@@ -235,9 +248,9 @@ while ongoing:
 	time.sleep(0.010)
 
 # exited control loop, clean up
-leftLed.write("0")
+leftLed.write("1")
 leftLed.close()
-rightLed.write("0")
+rightLed.write("1")
 leftLed.close()
 
 # stop telemetry server
