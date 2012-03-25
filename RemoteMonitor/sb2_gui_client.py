@@ -167,12 +167,13 @@ while True:
 
 	bg.redraw()
 
-	if not histo_show:
+	if tele.connected and not histo_show:
 
-		left_temp_graph.draw(tele.i.brgLT)
-		left_torque_graph.draw(tele.i.motLC)
-		left_pwm_graph.draw(tele.o.l_trq)
-		left_batt_level.draw(tele.i.batLV)
+		if not tele.o.failed_l:
+			left_temp_graph.draw(tele.i.brgLT)
+			left_torque_graph.draw(tele.i.motLC)
+			left_pwm_graph.draw(tele.o.l_trq)
+			left_batt_level.draw(tele.i.batLV)
 
 		if not tele.i.failed_j:
 			frame.draw()
@@ -181,18 +182,19 @@ while True:
 			gps_radar.draw(tele.i.gpsHdng, tele.i.gpsSpd)
 		lateral_acc_graph.draw(tele.i.accY)
 
-		right_pwm_graph.draw(tele.o.r_trq)
-		right_torque_graph.draw(tele.i.motRC)
-		right_temp_graph.draw(tele.i.brgRT)
-		right_batt_level.draw(tele.i.batRV)
+		if not tele.o.failed_r:
+			right_pwm_graph.draw(tele.o.r_trq)
+			right_torque_graph.draw(tele.i.motRC	)
+			right_temp_graph.draw(tele.i.brgRT)
+			right_batt_level.draw(tele.i.batRV)
 
 	pygame.display.flip()
 
 	# wait 1/x seconds
 	clock.tick(25)
 
-	if not tele.connected: 
-		sys.exit(-1)
+#	if not tele.connected: 
+#		sys.exit(-1)
 
 	if testing:
 		paused = True
