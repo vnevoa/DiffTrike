@@ -23,6 +23,7 @@
 import fcntl, struct
 import time
 
+IOCTL_I2C_SETTIMEOUT = 0x0702
 IOCTL_I2C_SETSLAVE = 0x0703
 IOCTL_I2C_FORCESLAVE = 0x0706
 
@@ -34,6 +35,7 @@ class I2CSlave():
 			fcntl.ioctl(self.file, IOCTL_I2C_FORCESLAVE, address)
 		else:
 			fcntl.ioctl(self.file, IOCTL_I2C_SETSLAVE, address)
+		fcntl.ioctl(self.file, IOCTL_I2C_SETTIMEOUT, 10) #100ms
 
 	def __del__(self):
 		self.file.close()
