@@ -57,12 +57,12 @@ gps_radar = sb2_gui_widgets.Azimuth(bg, "GPS", (bg.width/2, 2 * bg.height/7), fr
 # left widgets:
 left_batt_level = sb2_gui_widgets.Bargraph(bg, "Ubat [V]", (bg.width/horiz_divs -25, bg.height/vert_divs), (12, 36), (30, 2*bg.height/vert_divs), (0, 100, 0))
 left_temp_graph = sb2_gui_widgets.Bargraph(bg, "T [C]", (2*bg.width/horiz_divs -25, bg.height/vert_divs), (10, 50), (25, 2*bg.height/vert_divs), (200, 0, 50))
-left_torque_graph = sb2_gui_widgets.Bargraph(bg, "I [A]", (3*bg.width/horiz_divs -25, bg.height/vert_divs), (0, 20), (50, 2*bg.height/vert_divs), (0,0,200))
+left_torque_graph = sb2_gui_widgets.Bargraph(bg, "I [A]", (3*bg.width/horiz_divs -25, bg.height/vert_divs), (0, 15), (30, 2*bg.height/vert_divs), (0,0,200))
 left_pwm_graph = sb2_gui_widgets.Bargraph(bg, "PWM", (4*bg.width/horiz_divs -25, bg.height/vert_divs), (-1, 1), (50, 2*bg.height/vert_divs))
 
 # right widgets:
 right_pwm_graph = sb2_gui_widgets.Bargraph(bg, "PWM", (6*bg.width/horiz_divs -25, bg.height/vert_divs), (-1,1), (50, 2*bg.height/vert_divs))
-right_torque_graph = sb2_gui_widgets.Bargraph(bg, "I [A]", (7*bg.width/horiz_divs -25, bg.height/vert_divs), (0,20), (50, 2*bg.height/vert_divs), (0,0,200))
+right_torque_graph = sb2_gui_widgets.Bargraph(bg, "I [A]", (7*bg.width/horiz_divs -25, bg.height/vert_divs), (0,15), (30, 2*bg.height/vert_divs), (0,0,200))
 right_temp_graph = sb2_gui_widgets.Bargraph(bg, "T [C]", (8*bg.width/horiz_divs -25, bg.height/vert_divs), (10, 50), (25, 2*bg.height/vert_divs), (200, 0, 50))
 right_batt_level = sb2_gui_widgets.Bargraph(bg, "Ubat [V]", (9*bg.width/horiz_divs -25, bg.height/vert_divs), (12, 36), (30, 2*bg.height/vert_divs), (0, 100, 0))
 
@@ -81,21 +81,33 @@ output_histo = sb2_gui_data.Histogram()
 total_histo = sb2_gui_data.Histogram()
 histo_show = False
 paused = False
+remote_control = False
 if testing:
 	tele = sb2_gui_data.DummyTelemetry()
 else:
 	tele = sb2_gui_data.Telemetry("192.168.5.202", 11000)
 log.write(tele.i.logHeader() + tele.o.logHeader() + "\n")
+screen_width = 1.0 * pygame.display.Info().current_w
+screen_height = 1.0 * pygame.display.Info().current_h
 
 # event loop:
 while True: 
 
     # collect input:
 	events = pygame.event.get()
-	if stick.present:
-		X, Y = stick.getXY()
-	else:
+	if not remote_control:
 		X, Y = tele.getJoystick()
+	else:
+		if stick.present:
+			X, Y = stick.getXY()
+		else:
+			(b1, b2, b3) = pygame.mouse.get_pressed()
+			if b3: # hold the right mouse button to make it the joystick.
+				(X, Y) = pygame.mouse.get_pos()
+				X = (X / screen_width) * 2.0 - 1.0
+				Y = (Y / screen_height) * 2.0 - 1.0
+			else:
+				X = Y = 0.0
 	fresh_data = tele.fresh
 	(ti, tp, to, tc) = tele.getTimes()
 
@@ -110,6 +122,8 @@ while True:
 				histo_show = not histo_show
 			if event.unicode == 'p':
 				paused = not paused
+			if event.unicode == 'r':
+				remote_control = not remote_control
 
 	cross.x = bg.width/2 + ( frame.size/2 * X )
 	cross.y = bg.height/2 + ( frame.size/2 * Y )
@@ -193,10 +207,7 @@ while True:
 	# wait 1/x seconds
 	clock.tick(25)
 
-#	if not tele.connected: 
-#		sys.exit(-1)
-
-	if testing:
-		paused = True
+#	if testing:
+#		paused = True
 
 # the end
