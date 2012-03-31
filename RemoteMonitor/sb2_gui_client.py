@@ -186,8 +186,9 @@ while True:
 		if not tele.o.failed_l:
 			left_temp_graph.draw(tele.i.brgLT)
 			left_torque_graph.draw(tele.i.motLC)
-			left_pwm_graph.draw(tele.o.l_trq)
 			left_batt_level.draw(tele.i.batLV)
+
+		left_pwm_graph.draw(tele.o.l_trq)
 
 		if not tele.i.failed_j:
 			frame.draw()
@@ -197,10 +198,11 @@ while True:
 		lateral_acc_graph.draw(tele.i.accY)
 
 		if not tele.o.failed_r:
-			right_pwm_graph.draw(tele.o.r_trq)
+			right_batt_level.draw(tele.i.batRV)
 			right_torque_graph.draw(tele.i.motRC	)
 			right_temp_graph.draw(tele.i.brgRT)
-			right_batt_level.draw(tele.i.batRV)
+
+		right_pwm_graph.draw(tele.o.r_trq)
 
 	pygame.display.flip()
 
