@@ -1,10 +1,9 @@
-The DiffTrike project attempts to develop the embedded controller
+The DiffTrike project attempts to develop the embedded control system
 for a Differential Traction Hybrid Human-Electric Tricycle.
 
-The project hosts two sets of files:
-- one to execute in the Trike controller itself, called "SoapBoxMkII";
-- one to optionally execute in a remote computer, called "RemoteMonitor".
+The project hosts one set of files for each hardware incarnation:
+- MarkII: Openmoko GTA02 controller + NJay's Homebrew Power bridges.
+- MarkIII: Raspberry Pi controller + Devantech MD03 robotics power bridges.
 
 The copyright licence of this Open Source project's files is the GNU GPL version 3.
-Feel free to hack away, fork, or contribute. 
-Just don't ask me for money for any reason whatsoever. :)
+Feel free to hack away, fork, or contribute. Just don't ask me for money for any reason whatsoever. :)
