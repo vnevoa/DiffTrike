@@ -1,0 +1,15 @@
+This is the place for all the files that implement the SoapBox Mark III proof-of-concept controller, in its third incarnation platform. Everything here is copied into the on-board controller of the Trike. 
+Currently the chosen Hardware for this controller is a Raspberry Pi board, type A (use /dev/i2c-0 instead of /dev/i2c-1 on type B) plus a pair of Devantech MD03 power controllers.
+
+The GNU/Linux distribution used as a basis for this controller is the Debian based "Raspbian" because it is the one suggested by the RasPi community.
+You can download the latest card-flashable images from http://www.raspberrypi.org/downloads and flash them onto the SD-card by following these instructions: http://elinux.org/RPi_Easy_SD_Card_Setup
+
+After flashing and booting it and running the built-in configuration wizard, I just copy over the files to /home/pi/, open up a console (local or SSH) and run the install script by doing "chmod +x /home/pi/installsb2.sh; sudo /home/pi/installsb2.sh".
+
+Project files and their function:
+- "installsb2.sh": the installation script for this software package into a Raspbian distro.
+- "interfaces" corresponds to the /etc/network/interfaces linux configuration file.
+- "soapbox.sh" is a SysV init script that launches and kills the controller application once it is installed in /etc/init.d/ and links produced with "update-rc.d soapbox.sh defaults".
+- "sb2.py": the control application itself, to be placed in /home/pi/.
+- "sb2_*.py": the custom modules necessary to the main application, also going into /home/pi/.
+
