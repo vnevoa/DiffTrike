@@ -57,12 +57,12 @@ gps_radar = sb2_gui_widgets.Azimuth(bg, "GPS", (bg.width/2, 2 * bg.height/7), fr
 # left widgets:
 left_batt_level = sb2_gui_widgets.Bargraph(bg, "Ubat [V]", (bg.width/horiz_divs -25, bg.height/vert_divs), (12, 36), (30, 2*bg.height/vert_divs), (0, 100, 0))
 left_temp_graph = sb2_gui_widgets.Bargraph(bg, "T [C]", (2*bg.width/horiz_divs -25, bg.height/vert_divs), (10, 50), (25, 2*bg.height/vert_divs), (200, 0, 50))
-left_torque_graph = sb2_gui_widgets.Bargraph(bg, "I [A]", (3*bg.width/horiz_divs -25, bg.height/vert_divs), (0, 15), (30, 2*bg.height/vert_divs), (0,0,200))
+left_torque_graph = sb2_gui_widgets.Bargraph(bg, "I [A]", (3*bg.width/horiz_divs -25, bg.height/vert_divs), (0, 20), (30, 2*bg.height/vert_divs), (0,0,200))
 left_pwm_graph = sb2_gui_widgets.Bargraph(bg, "PWM", (4*bg.width/horiz_divs -25, bg.height/vert_divs), (-1, 1), (50, 2*bg.height/vert_divs))
 
 # right widgets:
 right_pwm_graph = sb2_gui_widgets.Bargraph(bg, "PWM", (6*bg.width/horiz_divs -25, bg.height/vert_divs), (-1,1), (50, 2*bg.height/vert_divs))
-right_torque_graph = sb2_gui_widgets.Bargraph(bg, "I [A]", (7*bg.width/horiz_divs -25, bg.height/vert_divs), (0,15), (30, 2*bg.height/vert_divs), (0,0,200))
+right_torque_graph = sb2_gui_widgets.Bargraph(bg, "I [A]", (7*bg.width/horiz_divs -25, bg.height/vert_divs), (0, 20), (30, 2*bg.height/vert_divs), (0,0,200))
 right_temp_graph = sb2_gui_widgets.Bargraph(bg, "T [C]", (8*bg.width/horiz_divs -25, bg.height/vert_divs), (10, 50), (25, 2*bg.height/vert_divs), (200, 0, 50))
 right_batt_level = sb2_gui_widgets.Bargraph(bg, "Ubat [V]", (9*bg.width/horiz_divs -25, bg.height/vert_divs), (12, 36), (30, 2*bg.height/vert_divs), (0, 100, 0))
 
@@ -190,7 +190,7 @@ while True:
 
 		left_pwm_graph.draw(tele.o.l_trq)
 
-		if not tele.i.failed_j:
+		if remote_control or (not remote_control and not tele.i.failed_j):
 			frame.draw()
 			cross.draw()
 		if tele.i.gpsVld:
