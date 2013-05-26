@@ -205,7 +205,7 @@ class I2CMotorBridge():
 
 
 # This is a simple test routine that only runs if this module is 
-# called directly with "python sb2_motor_md03.py"
+# called directly with "python sb_motor_md03.py"
 
 if __name__ == '__main__':
 

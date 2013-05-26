@@ -2,6 +2,7 @@ The DiffTrike project attempts to develop the embedded control system
 for a Differential Traction Hybrid Human-Electric Tricycle.
 
 The project hosts one set of files for each hardware incarnation:
+- MarkI: no files, was a purely analog solution.
 - MarkII: Openmoko GTA02 controller + NJay's Homebrew Power bridges.
 - MarkIII: Raspberry Pi controller + Devantech MD03 robotics power bridges.
 

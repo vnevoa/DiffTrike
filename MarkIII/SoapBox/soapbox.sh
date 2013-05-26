@@ -1,9 +1,9 @@
 #! /bin/sh
 set -e
 
-# /etc/init.d/soapbox: start and stop the MyOwnHybrid "SoapBoxMkII control" daemon
+# /etc/init.d/soapbox: start and stop the MyOwnHybrid "SoapBoxMkIII control" daemon
 
-APP=/home/pi/SoapBoxMkII-pi/sb2.py
+APP=/home/pi/SoapBoxMkIII/sb.py
 WI=
 USBHOST=
 USBPOWER=
@@ -17,7 +17,7 @@ test -x $APP || exit 0
 case "$1" in
   start)
 
-	echo -n "Starting SoapBoxMkII control application... "
+	echo -n "Starting SoapBoxMkIII control application... "
 
 	# network interfaces are auto configured and pulled up by 'ifup'.
 
@@ -28,7 +28,7 @@ case "$1" in
 
 	;;
   stop)
-        echo "Stopping SoapBoxMkII control application."
+        echo "Stopping SoapBoxMkIII control application."
 	start-stop-daemon -K -x /usr/bin/python $APP
 	;;
   *)

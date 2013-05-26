@@ -25,7 +25,7 @@
 #### module imports ####
 
 import os, sys, signal, time, thread, struct, math
-import sb2_input, sb2_output, sb2_joystick, sb2_telemetry, sb2_motor_md03
+import sb_input, sb_output, sb_joystick, sb_telemetry, sb_motor_md03
 import pygame
 
 #### global flags
@@ -73,8 +73,8 @@ def blinkled():
 print "Starting initializations."
 t0 = time.time()
 ongoing = True
-i = sb2_input.inputData()
-o = sb2_output.outputData()
+i = sb_input.inputData()
+o = sb_output.outputData()
 sync = thread.allocate_lock()
 
 # register termination trap:
@@ -94,18 +94,18 @@ sync.acquire()
 # connect to the usb joystick:
 j_exp_x = j_exp_y = 2.0 # dampening exponent for axis readings.
 pygame.init()
-stick = sb2_joystick.Joystick(0)
+stick = sb_joystick.Joystick(0)
 
 # connect to Left motor power bridge:
-leftM = sb2_motor_md03.I2CMotorBridge('LEFT', '/dev/i2c-1', 0x58)
+leftM = sb_motor_md03.I2CMotorBridge('LEFT', '/dev/i2c-1', 0x58)
 leftLed = open('/dev/null','w',0)
 
 # connect to Right motor power bridge:
-rightM = sb2_motor_md03.I2CMotorBridge('RIGHT', '/dev/i2c-1', 0x5A)
+rightM = sb_motor_md03.I2CMotorBridge('RIGHT', '/dev/i2c-1', 0x5A)
 rightLed = open('/dev/null','w',0)
 
 # initialize telemetry
-t = sb2_telemetry.MyTcpServer()
+t = sb_telemetry.MyTcpServer()
 t.start("192.168.5.202", 11000, getstruct)
 
 t1 = time.time()

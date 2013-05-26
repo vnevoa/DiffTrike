@@ -8,7 +8,7 @@ iface eth0 inet dhcp
 auto wlan0
 iface wlan0 inet static
 	wireless-mode ad-hoc
-	wireless-essid SoapBoxMkII
+	wireless-essid SoapBoxMkIII
 	wireless-key '1234567890'
         address 192.168.5.202                  
         netmask 255.255.255.0                         

@@ -60,7 +60,7 @@ class Joystick():
 		return ret    
 
 # This is a simple test routine that only runs if this module is 
-# called directly with "python sb2_joystick.py"
+# called directly with "python sb_joystick.py"
 
 if __name__ == '__main__':
     pygame.init();

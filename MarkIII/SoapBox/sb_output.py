@@ -93,7 +93,7 @@ class outputData():
 
 
 # This is a simple test routine that only runs if this module is 
-# called directly with "python sb2_output.py"
+# called directly with "python sb_output.py"
 
 if __name__ == '__main__':
 	o = outputData()

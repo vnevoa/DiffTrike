@@ -135,7 +135,7 @@ class inputData():
 failed_j;failed_a;failed_g;failed_r;failed_l;motLC;motRC;brgRT;brgLT;batRV;batLV;"
 
 # This is a simple test routine that only runs if this module is 
-# called directly with "python sb2_input.py"
+# called directly with "python sb_input.py"
 
 if __name__ == '__main__':
 	i = inputData()
