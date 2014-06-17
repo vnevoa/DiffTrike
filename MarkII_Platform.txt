@@ -1,0 +1,2 @@
+Main Controller = OpenMoko GTA02 linux phone
+Motor Power Bridges = NJAY's Homebrew
