@@ -3,7 +3,7 @@ set -e
 
 # /etc/init.d/soapbox: start and stop the MyOwnHybrid "SoapBoxMkIII control" daemon
 
-APP=/home/pi/SoapBoxMkIII/sb.py
+APP=/home/pi/SoapBox/sb.py
 WI=
 USBHOST=
 USBPOWER=

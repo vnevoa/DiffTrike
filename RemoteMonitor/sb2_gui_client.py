@@ -24,7 +24,7 @@
 #
 
 import sys, os, pygame, time, getopt
-sys.path.append("../SoapBoxMkII") # sb2_input & sb2_output are shared.
+sys.path.append("../SoapBox") # sb2_input & sb2_output are shared.
 import sb2_gui_data, sb2_gui_widgets
 from pygame.locals import * 
 from pygame.gfxdraw import *

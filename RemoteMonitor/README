@@ -1,0 +1,6 @@
+This is the place for the files that live in the remote monitoring station.
+They implement one or more client applications that connect to the Trike controller to help monitor and debug and control the Trike's behaviour.
+
+Files and their function:
+- "sb2_cli_client.py": a command line interface (console) application that just connects to the controller and dumps the full data coming out. Good for simple debugging.
+- "sb2_gui_client.py": a graphical user interface built on top of PyGame that connects to the controller and tries to interpret and show the realtime information coming from it. The intention it to use it for field testing and tuning.

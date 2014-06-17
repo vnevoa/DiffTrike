@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-#
 #    Copyright 2011 Vasco Nevoa.
 #
 #    This file is part of DiffTrike.
@@ -19,12 +18,24 @@
 #    along with DiffTrike. If not, see <http://www.gnu.org/licenses/>.
 
 #
-# This module implements the IIC bus library.
+# This implements a command line interface application that connects to
+# the Trike controller via a socket to dump the internal state of the
+# controller in real time on the console.
 #
 
-import i2c_lib
+import sys, time
+sys.path.append("../SoapBox")
+import sb2_input, sb2_output, sb2_gui_data
 
-# mask the RTC interrupts from PCF50633 power management unit.
-pmu = i2c_lib.I2CSlave('/dev/i2c-0', 0x73, True)
-pmu.write(0x07, 0xC0)
+tele = sb2_gui_data.Telemetry("192.168.5.202", 11000)
+print ""
+print "Inputs: ", tele.i.logHeader(), "\n"
+print "Outputs: ", tele.o.logHeader(), "\n"
+time.sleep(0.5)
+while tele.connected:
+	print "Inputs: ", tele.i.log()
+	print "Outputs: ", tele.o.log()
+	print ""
+	time.sleep(0.5)
+
 
