@@ -1,5 +1,5 @@
-This is the place for all the files that implement the SoapBox Mark III proof-of-concept controller, in its third incarnation platform. Everything here is copied into the on-board controller of the Trike. 
-Currently the chosen Hardware for this controller is a Raspberry Pi board, type A (use /dev/i2c-0 instead of /dev/i2c-1 on type B) plus a pair of Devantech MD03 power controllers.
+This is the place for all the files that implement the SoapBox Mark IV proof-of-concept controller, in its fourth incarnation platform. Everything here is copied into the on-board controller of the Trike. 
+Currently the chosen Hardware for this controller is a Raspberry Pi board, type A (use /dev/i2c-0 instead of /dev/i2c-1 on type B) plus a pair of NJay's Homebrew Power bridges.
 
 The GNU/Linux distribution used as a basis for this controller is the Debian based "Raspbian" because it is the one suggested by the RasPi community.
 You can download the latest card-flashable images from http://www.raspberrypi.org/downloads and flash them onto the SD-card by following these instructions: http://elinux.org/RPi_Easy_SD_Card_Setup

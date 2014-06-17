@@ -5,6 +5,7 @@ The project hosts one set of files for each hardware incarnation:
 - MarkI: no files, was a purely analog solution.
 - MarkII: Openmoko GTA02 controller + NJay's Homebrew Power bridges.
 - MarkIII: Raspberry Pi controller + Devantech MD03 robotics power bridges.
+- MarkIV: Raspberry Pi controller + NJay's Homebrew Power bridges & comms bridge.
 
 The copyright licence of this Open Source project's files is the GNU GPL version 3.
 Feel free to hack away, fork, or contribute. Just don't ask me for money for any reason whatsoever. :)
