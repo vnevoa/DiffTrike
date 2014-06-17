@@ -1,0 +1,3 @@
+Main Controller = Raspberry Pi
+Motor Power Bridges = NJay's Homebrew
+Communications Bridge = NJay's Homebrew
