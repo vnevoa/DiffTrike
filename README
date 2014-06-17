@@ -2,7 +2,7 @@ The DiffTrike project attempts to develop the embedded controller
 for a Differential Traction Hybrid Human-Electric Tricycle.
 
 The project hosts two sets of files:
-- one to execute in the Trike controller itself, called "SoapBoxMkII";
+- one to execute in the Trike controller itself, called "SoapBox";
 - one to optionally execute in a remote computer, called "RemoteMonitor".
 
 The copyright licence of this Open Source project's files is the GNU GPL version 3.

@@ -1,0 +1,14 @@
+This is the place for all the files that implement the SoapBox Mark II proof-of-concept controller.
+Everything here is copied into the on-board controller of the Trike. Currently the chosen Hardware for this controller is the motherboard of an Openmoko GTA02 issue A6, a.k.a. "Neo Freerunner". http://wiki.openmoko.org/wiki/Neo_FreeRunner_Hardware
+
+The GNU/Linux distribution used as a basis for this controller is "SHR-unstable" because it is the most alive one in the Openmoko community at the moment of this project's inception.
+You can download the latest flashable images from http://shr.bearstech.com/shr-unstable/images/om-gta02/ and flash them onto the phone by following these instructions: http://wiki.openmoko.org/wiki/SHR_User_Manual#Installation_on_Flash
+
+After flashing I removed all the smartphone-specific applications, including the X11 graphic server and FSO and SHR daemons and libs, since they are not necessary for the project and would only consume CPU and RAM. After this the system is free to execute the control application in a predictable manner, retaining the comforts of a networking stack, device drivers for the exotic hardware of this phone, a python interpreter out-of-the-box, and a package manager.
+
+Project files and their function:
+- "interfaces" corresponds to the /etc/network/interfaces linux configuration file. You can link or copy it there.
+- "soapbox.sh" is a SysV init script that launches and kills the controller application once it is installed in /etc/init.d/ and links produced with "update-rc.d soapbox.sh defaults".
+- "sb2.py": the control application itself, to be placed in /home/root/.
+- "sb2_*.py": the custom modules necessary to the main application, also going into /home/root/.
+
