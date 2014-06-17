@@ -34,7 +34,7 @@ opkg install htop
 opkg install python-pygame
 opkg install python-netserver python-netclient
 
-# Copy all the project files from "DiffTrike/SoapBoxMkII/" into "/home/root/" of the GTA02
+# Copy all the project files from "DiffTrike/SoapBox/" into "/home/root/" of the GTA02
 # you can use "scp" or any SFTP enabled file manager application.
 
 # set executable permissions and install application as daemon:
