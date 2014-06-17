@@ -1,0 +1,2 @@
+Main Controller = Raspberry Pi
+Motor Power Bridges = Devantech MD03
