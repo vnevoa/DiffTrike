@@ -38,6 +38,8 @@ class outputData():
 		self.failed_l = False # Fail Flag for Left Motor Output.
 		self.glitches_r = 0 # right bridge I2C glitches.
 		self.glitches_l = 0 # left bridge I2C glitches.
+		self.resets_r = 0 # right bridge uC resets.
+		self.resets_l = 0 # left bridge uC resets.
 		self.seed = 0 # only for random test data.
 
 	def randomize(self):
@@ -59,11 +61,12 @@ class outputData():
 		""" grabs all the data fields and stuffs them into a string for network communications """
 
 		self.tstamp = time.time()
-		return struct.pack("dffffff???ii",
+		return struct.pack("dffffff???iiii",
 		self.tstamp, self.t_in, self.t_proc, self.t_out, self.t_cycl,
 		self.l_trq, self.r_trq,
 		self.failed, self.failed_r, self.failed_l,
-		self.glitches_r, self.glitches_l)
+		self.glitches_r, self.glitches_l,
+		self.resets_r, self.resets_l)
 
 
 	def deserialize(self, stream):
@@ -73,8 +76,9 @@ class outputData():
 		(self.tstamp, self.t_in, self.t_proc, self.t_out, self.t_cycl,
 		self.l_trq, self.r_trq,
 		self.failed, self.failed_r, self.failed_l,
-		self.glitches_r, self.glitches_l) = \
-		struct.unpack("dffffff???ii", stream)
+		self.glitches_r, self.glitches_l,
+		self.resets_r, self.resets_l) = \
+		struct.unpack("dffffff???iiii", stream)
 
 	def log(self):
 
@@ -83,13 +87,14 @@ class outputData():
 		return "{0:.3f}".format(self.tstamp) + ";" + "{0:.2f}".format(self.t_in) + ";" + "{0:.2f}".format(self.t_proc) + ";" + "{0:.2f}".format(self.t_out) + ";" + \
 		"{0:.2f}".format(self.l_trq) + ";" + "{0:.2f}".format(self.r_trq) + ";" + \
 		"{0:d}".format(self.failed) + ";" + "{0:d}".format(self.failed_r) + ";" + "{0:d}".format(self.failed_l) + ";" + \
-		"{0:d}".format(self.glitches_r) + ";" + "{0:d}".format(self.glitches_l) + ";"
+		"{0:d}".format(self.glitches_r) + ";" + "{0:d}".format(self.glitches_l) + ";" + \
+		"{0:d}".format(self.resets_r) + ";" + "{0:d}".format(self.resets_l) + ";"
 		
 	def logHeader(self):
 
 		""" returns the names of all the data fields """
 
-		return "tstamp;t_in;t_proc;t_out;l_trq;r_trq;failed;failed_r;failed_l;glitches_r;glitches_l;"
+		return "tstamp;t_in;t_proc;t_out;l_trq;r_trq;failed;failed_r;failed_l;glitches_r;glitches_l;resets_r;resets_l"
 
 
 # This is a simple test routine that only runs if this module is 

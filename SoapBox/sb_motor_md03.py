@@ -25,7 +25,7 @@ import i2c_lib
 
 # Bridge controller registers:
 REG_COMMAND = 0       #RW, 0:stop, 1:fwd, 2:rev.
-REG_STATUS = 1        #RW, b0:accelerating, b1:over-current, b2:over-temperature, b7:busy.
+REG_STATUS = 1        #RO, b0:accelerating, b1:over-current, b2:over-temperature, b7:busy.
 REG_PWM = 2           #RW, PWM, 0..243
 REG_ACCELERATION = 3  #RW, 0:fastest
 REG_TEMPERATURE = 4   #RO, NTC, 1/1.42 C
@@ -51,6 +51,7 @@ class I2CMotorBridge():
 		self.ongoing = False	# i/o thread lifespan control
 		self.lastval = 0	# token to check for resets
 		self.reset = False	# did the bridge reset?
+		self.resets = 0		# how many times did the bridge reset?
 		self.name = name	# friendly name
 		self.debug = debug	# should I speak loudly?
 
@@ -84,7 +85,7 @@ class I2CMotorBridge():
 		ramping = 0
 		clip = 0
 		temp = 0
-		resets = 0
+		self.resets = 0
 		max_I = 0.0
 
 		while self.ongoing:
@@ -98,7 +99,7 @@ class I2CMotorBridge():
 				if self.busy: busy += 1
 				if self.alarm_I: clip += 1
 				if self.alarm_T: temp += 1
-				if self.reset: resets += 1
+				if self.reset: self.resets += 1
 				if self.I > max_I: max_I = self.I
 			except:
 				self.blockings += 1
@@ -114,22 +115,22 @@ class I2CMotorBridge():
 				t1 = time.time()
 				if ((t1 - t0) * 1000) > 1000:
 					t0 = t1
-					print "%s: \tops/sec = %d" % (self.device.getId(), ops)
-					print " \tmax curr = %0.2fA" % max_I
-					if self.blockings: print " \tglitches = %d" % self.blockings
-					if busy: print " \tbusy = %d" % busy
-					if ramping: print " \tramping = %d" % ramping
-					if clip: print " \tclip = %d" % clip
-					if temp: print " \tt_lim = %d" % temp
-					if resets: print " \tresets = %d" % resets
-					print "\n"
+					line = "%s: \n\tops/sec = %d" % (self.device.getId(), ops)
+					line += " \tmax curr = %0.2fA" % max_I
+					if ramping: line += " \tramping = %d" % ramping
+					if clip: line += " \tclip = %d" % clip
+					if temp: line += " \tt_lim = %d" % temp
+					if busy: line += " \tBUSY = %d" % busy
+					if self.blockings: line += " \tGLITCHES = %d" % self.blockings
+					if self.resets: line += " \tRESETS = %d" % self.resets
+					print line + "\n"
 					ops = 0
 					self.blockings = 0
 					ramping = 0
 					busy = 0
 					clip = 0
 					temp = 0
-					resets = 0
+					self.resets = 0
 					max_I = 0.0
 
 			# SLEEP:
@@ -143,8 +144,8 @@ class I2CMotorBridge():
 		self.alarm_I = b & 0x02  # current limited
 		self.alarm_T = b & 0x04  # temperature limited
 		self.reset = (c != self.lastval) # last pwm lost => bridge was reset
-		self.I = f * 20.0 / 186.0 # Amps
-		self.T = (255 - e) * 1.42 # ???
+		self.I = (f * 20.0) / 186.0 # Amps
+		self.T = e #(255 - e) * 1.42 # ???
 		self.fw = h # firmware revision
 
 
@@ -189,7 +190,7 @@ class I2CMotorBridge():
 
 
 	def writeTorque(self):
-		self.device.write(REG_ACCELERATION, 0)
+		self.device.write(REG_ACCELERATION, 10)
 		busy_time = 0.0
 		if self.torque < 0.0:
 			pwm = int(-self.torque * MAX_PWM)
@@ -220,7 +221,7 @@ if __name__ == '__main__':
 	while m1ok or m2ok:
 
 		for i in range(0, pmax+1) + range(pmin, 1):
-			print "Setting torque = %0.2f" % (i/255.0)
+			#print "Setting torque = %0.2f" % (i/255.0)
 			if m1ok: m1.setTorque(i/255.0)
 			if m2ok: m2.setTorque(i/255.0)
 			time.sleep(0.10)

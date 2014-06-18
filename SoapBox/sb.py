@@ -129,18 +129,22 @@ while ongoing:
 	pygame.event.pump() # this is essential for joystick updates.
 	try:
 		i.jsB1, i.jsB2 = stick.getButtons(2)
-#		if i.jsB1: # button 1 as dead man's switch.
-		i.jsX, i.jsY = stick.getXY()
-#		else:
-#			i.jsX = i.jsY = 0.0
+		if i.jsB1: # button 1 as dead man's switch.
+			i.jsX, i.jsY = stick.getXY()
+		else:
+			i.jsX = i.jsY = 0.0
 	except:
 		i.failed_j = True
+		i.jsX = i.jsY = 0.0
 
 	# read left bridge:
 	i.failed_l = False
 	try:
 		i.motLC = leftM.getCurrent()
+		i.motLCclip = leftM.alarm_I
 		i.batLV = leftM.getVoltage()
+		i.brgLT = leftM.getTemperature()
+		i.brgLTclip = leftM.alarm_T
 	except:
 		i.failed_l = True
 
@@ -148,27 +152,14 @@ while ongoing:
 	i.failed_r = False
 	try:
 		i.motRC = rightM.getCurrent()
-		i.batRV = leftR.getVoltage()
+		i.motRCclip = rightM.alarm_I
+		i.batRV = rightM.getVoltage()
+		i.brgRT = rightM.getTemperature()
+		i.brgRTclip = rightM.alarm_T
 	except:
 		i.failed_r = True
 
-	# read lateral accelerometer:
-	i.failed_a = False
-	try:
-		i.accY = accel1.getY()
-		i.accX = accel1.getX()
-	except:
-		i.failed_a = True
-
-	# read Gps:
-	i.failed_g = False
-	try:
-		i.gpsVld = gps.isValid()
-		(i.gpsSpd, i.gpsHdng) = gps.getVelocity()
-	except:
-		i.failed_g = True
-
-	i.failed = i.failed_r or i.failed_l or i.failed_j or i.failed_a or i.failed_g
+	i.failed = i.failed_r or i.failed_l or i.failed_j
 
 	t1 = time.time()
 
@@ -208,8 +199,9 @@ while ongoing:
 		leftM.setTorque(o.l_trq)
 	except:
 		o.failed_l = True
-		o.glitches_l += 1
 		#print "Failed l.setTorque(%0.3f)" % (o.l_trq)
+	o.glitches_l = leftM.blockings
+	o.resets_l = leftM.resets
 
 	if not i.failed_j: rightLed.write( str(1+int(253*(0.5+o.r_trq/2.0))) )
 
@@ -219,8 +211,9 @@ while ongoing:
 		rightM.setTorque(o.r_trq)
 	except:
 		o.failed_r = True
-		o.glitches_r += 1
 		#print "Failed r.setTorque(%0.3f)" % (o.r_trq)
+	o.glitches_r = rightM.blockings
+	o.resets_r = rightM.resets
 
 	o.failed = o.failed_r or o.failed_l
 
