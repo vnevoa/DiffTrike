@@ -30,8 +30,8 @@ class inputData():
 		# joystick data:
 		self.jsX = 0.0 # Joystick X coordenate [-1..1].
 		self.jsY = 0.0 # Joystick Y coordenate [-1..1].
-		self.jsB1 = 0 # Joystick Button 1 state [0, 1].
-		self.jsB2 = 0 # Joystick Button 2 state [0, 1].
+		self.jsB1 = False # Joystick Button 1 state.
+		self.jsB2 = False # Joystick Button 2 state.
 		self.jsHatX = 0.0 # Joystick Hat X state [-1, 0, 1].
 		self.jsHatY = 0.0 # Joystick Hat Y state [-1, 0, 1].
 		self.failed_j = False # Fail Flag for Joystick Input.
@@ -49,11 +49,15 @@ class inputData():
 
 		# motor bridge data:
 		self.motLC = 0.0 # Left Motor Current [A].
+		self.motLCclip = False # Left Motor Current Clipping.
 		self.failed_l = False # Fail Flag for Left Motor Input.
 		self.motRC = 0.0 # Right Motor Current [A].
+		self.motRCclip = False # Right Motor Current Clipping.
 		self.failed_r = False # Fail Flag for Right Motor Input.
 		self.brgLT = 0 # Left Bridge Temperature [C].
+		self.brgLTclip = False # Left Bridge Temperature Clipping.
 		self.brgRT = 0 # Right Bridge Temperature [C].
+		self.brgRTclip = False # Right Bridge Temperature Clipping.
 		self.batLV = 0.0 # Left Battery Voltage [V].
 		self.batRV = 0.0 # Right Battery Voltage [V].
 
@@ -67,11 +71,12 @@ class inputData():
 
 		""" fills up the structure with random data. used only for testing. """
 
-		self.seed = random.random()
+		self.seed = random.random() # 0.0 .. 1.0
 
 		# joystick data:
 		self.jsX = (self.seed * 2) - 1 # -1..1
 		self.jsY = 1 - (self.seed * 2) # -1..1
+		self.jsB1 = (self.seed <= 0.50)
 
 		# accelerometer data:
 		self.accX = (self.seed * 4) - 2 # -2..2
@@ -84,9 +89,13 @@ class inputData():
 
 		# motor bridge data:
 		self.motLC = 20 - (self.seed * 40) # -20..20
+		self.motLCclip = (self.seed < 0.25)
 		self.motRC = (self.seed * 40) - 20 # -20..20
+		self.motRCclip = (self.seed >= 0.25 and self.seed < 0.50) 
 		self.brgLT = 10 + int(self.seed * 40) # 10..50
+		self.brgLTclip = (self.seed >= 0.50 and self.seed < 0.75)
 		self.brgRT = 50 - self.brgLT # 10..50
+		self.brgRTclip = (self.seed >= 0.75)
 		self.batLV = 22 + int(self.seed * 8) # 22..30
 		self.batRV = 30 - (self.batLV - 22) # 22..30
 
@@ -94,12 +103,13 @@ class inputData():
 
 		""" grabs all the data fields and stuffs them into a string for network communications """
 
-		return struct.pack("ff??ffffff???????ffiiff",
+		return struct.pack("ff??ffffff???????ffiiff????",
 		self.jsX, self.jsY, self.jsB1, self.jsB2, self.jsHatX, self.jsHatY,
 		self.accX, self.accY,
 		self.gpsSpd, self.gpsHdng, self.gpsVld,
 		self.failed, self.failed_j, self.failed_a, self.failed_g, self.failed_r, self.failed_l,
-		self.motLC, self.motRC, int(self.brgRT), int(self.brgLT), self.batRV, self.batLV)
+		self.motLC, self.motRC, int(self.brgRT), int(self.brgLT), self.batRV, self.batLV,
+		self.motLCclip, self.motRCclip, self.brgLTclip, self.brgRTclip)
 
 	def deserialize(self, stream):
 
@@ -109,8 +119,9 @@ class inputData():
 		self.accX, self.accY,
 		self.gpsSpd, self.gpsHdng, self.gpsVld,
 		self.failed, self.failed_j, self.failed_a, self.failed_g, self.failed_r, self.failed_l,
-		self.motLC, self.motRC, self.brgRT, self.brgLT, self.batRV, self.batLV) = \
-		struct.unpack("ff??ffffff???????ffiiff", stream)
+		self.motLC, self.motRC, self.brgRT, self.brgLT, self.batRV, self.batLV,
+		self.motLCclip, self.motRCclip, self.brgLTclip, self.brgRTclip) = \
+		struct.unpack("ff??ffffff???????ffiiff????", stream)
 
 	def log(self):
 
@@ -125,14 +136,17 @@ class inputData():
 		"{0:d}".format(self.failed_g) + ";" + "{0:d}".format(self.failed_r) + ";" + "{0:d}".format(self.failed_l) + ";" + \
 		"{0:.2f}".format(self.motLC) + ";" + "{0:.2f}".format(self.motRC) + ";" + \
 		"{0:d}".format(self.brgRT) + ";" + "{0:d}".format(self.brgLT) + ";" + \
-		"{0:.2f}".format(self.batRV) + ";" + "{0:.2f}".format(self.batLV) + ";"
+		"{0:.2f}".format(self.batRV) + ";" + "{0:.2f}".format(self.batLV) + ";" \
+		"{0:d}".format(self.motLCclip) + ";" +  "{0:d}".format(self.motRCclip) + ";" \
+		"{0:d}".format(self.brgLTclip) + ";" +  "{0:d}".format(self.brgRTclip) + ";" \
 
 	def logHeader(self):
 
 		""" returns the names of all the data fields """
 
 		return "jsX;jsY;jsB1;jsB2;jsHatX;jsHatY;accX;accY;gpsSpd;gpsHdng;gpsVld;failed;\
-failed_j;failed_a;failed_g;failed_r;failed_l;motLC;motRC;brgRT;brgLT;batRV;batLV;"
+failed_j;failed_a;failed_g;failed_r;failed_l;motLC;motRC;brgRT;brgLT;batRV;batLV;\
+motLCclip;motRCclip;brgLTclip;brgRTclip"
 
 # This is a simple test routine that only runs if this module is 
 # called directly with "python sb_input.py"
