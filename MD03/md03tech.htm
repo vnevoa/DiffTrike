@@ -1,0 +1,119 @@
+<html><head><meta http-equiv="Content-Language" content="en-gb"><meta http-equiv="Content-Type" content="text/html; charset=windows-1252"><meta name="GENERATOR" content="Microsoft FrontPage 4.0"><meta name="ProgId" content="FrontPage.Editor.Document"><title>MD03 Technical Documentation</title> </head><body><p align="center"><b><span style="background-color: #FFFF00"><font size="6">&nbsp;MD03 - 24Volt 20Amp H Bridge Motor Drive&nbsp;</font> </span></b></p><p><b>Overview</b><br>The
+ MD03 is a medium power motor driver, designed to supply power beyond 
+that of any of the low power single chip H-Bridges that exist. Main 
+features are ease of use and flexibility. The motor's power is 
+controlled by Pulse Width Modulation (PWM) of the H-Bridge at a 
+frequency of 15khz ( 7.5khz before version 12).&nbsp;<br>The 15v MOSFET drive voltage is generated onboard with a charge pump, so the module requires only two supply voltages;<br>1.&nbsp;&nbsp;&nbsp; A standard 5V supply for the control logic, only 50mA maximum is required.<br>2.&nbsp;&nbsp;&nbsp; The H-Bridge has a rating of 60v allowing Motor voltages up to 24vdc.<br>Control of the module can be any of;<br>&nbsp;&nbsp;&nbsp; a.&nbsp;&nbsp;&nbsp; I2C bus, up to 8 MD03 modules, switch selectable addresses.<br>&nbsp;&nbsp;&nbsp; b.&nbsp;&nbsp;&nbsp; 0v-2.5-5v analog input. 0v full reverse, 2.5v center stop, 5v full forward.<br>&nbsp;&nbsp;&nbsp; c.&nbsp;&nbsp;&nbsp; 0v-5v analog input with separate direction control<br>&nbsp;&nbsp;&nbsp; d.&nbsp;&nbsp;&nbsp; RC mode. Controlled directly from the RC receiver output.<br>&nbsp;&nbsp;&nbsp;
+ e.&nbsp;&nbsp;&nbsp; PWM. A simple onboard filter means you can use a 
+0%-100% 20khz or greater instead of analog.</p><p><b>Motor connections</b></p><table border="0" cellspacing="10" width="100%"><tbody><tr><td valign="top" width="28%"><table bgcolor="#FFFF00" border="1" bordercolor="#FF0000" width="100%"><tbody><tr><td width="100%"><p align="left">N<b>ote</b> - <b>There is no fuse on the&nbsp; PCB. You should provide a&nbsp;25/30A fuse in line with the +v battery terminal.</b></p><p align="center"><b>Don't Ignore this, High currents can be dangerous!</b></p></td></tr></tbody></table><p align="center">&nbsp;</p></td><td width="72%"><img src="md03tech_files/md03a.gif" border="0" height="238" width="493"></td></tr></tbody></table><p align="center"><b>Be sure to use cable rated for at least 25/30A for the Battery, Fuse and Motor leads.</b></p><p align="left"><font size="3"><b>Motor Noise Suppression&nbsp;<br></b>Please
+ note that using motors with the MD03 as with any other electronic 
+device requires suppression of noise. This is easily achieved by the 
+addition of a 10n snubbing capacitor across the motor. The capacitor 
+should also be capable of handling a voltage of twice the drive voltage 
+to the motor.</font></p><p><b>Control Connections</b></p><table border="0" cellspacing="10" width="100%"><tbody><tr><td valign="top" width="29%">The connections for use with the I2C Bus are marked on the PCB.<p>See text below for details of the other modes.</p></td><td width="71%"><img src="md03tech_files/md03b.gif" border="0" height="256" width="319"></td></tr></tbody></table><p><b>Analog Mode - 0v-2.5v-5v</b><br>In
+ this mode the motor is controlled by a 0v to 5v analog signal only on 
+the SDA line. Pin SCL is unused and should be connected to either +5v or
+ 0v.<br>0v is maximum reverse power<br>2.5v is the center stop position<br>5v is full forward power<br>The is a small (2.7%) dead band around 2.5v to provide a stable off position. Input impedance is 47k.</p><p><b>Analog Mode - 0v-5v<br></b>In this mode the motor is controlled by a 0v to 5v analog signal on the SDA line and direction on SCL. <b><br></b>0v is stop position<br>5v is full power<br>Pin SCL is the logic level (ttl) direction control. logic 0 for reverse direction and logic 1 for forward direction.<br><br>You
+ may also use a PWM signal instead of an analog voltage on the SDA line.
+ There is a simple resistor/capacitor filter on the module which will 
+generate the analog voltage from the incoming PWM signal. your PWM 
+signal should be 20khz or greater in frequency and ideally, come from a 
+CMOS gate (0-5v) rather than ttl (0-3.5v ish). a 0% duty cycle will 
+represent 0v and a 100% duty cycle representing 5v. This applies to both
+ the above analog modes. Note that the PWM input is not the same as the 
+PWM motor drive which is generated seperately.</p><p><b>RC Mode</b><br>This
+ mode allows direct connection to standard model radio control 
+receivers. Most receivers work from a 4.8v-6v battery pack and can be 
+powered by 5v supply that powers the MD03 logic. The control pulse 
+(Yellow) from the receiver should be connected to the SDA terminal. The 
+SCL terminal is unused and should be connected to either +5v or 0v. 
+Connect the receiver supply (Red) to +5v logic supply and the receiver 
+0v ground (Black) to the MD03 logic ground. The output from an RC 
+receiver is a high pulse 1.5mS wide when the joystick is central. This 
+varies down to 1.1mS and up to 1.9mS as the joystick is moved. This 
+range can be shifted by the centering control by +/-100uS from 1mS-1.8mS
+ to 1.2mS-2mS. The MD03 provides full control in the range 1.1mS to 
+1.9mS with 1.5mS being the center off position. There is a 7uS dead zone
+ centered on 1.5mS for the off position. The Radio Transmitter centering
+ control should be adjusted so that the motor is off when the joystick 
+is released.</p><p><b>RC Mode With Timeout </b>(from version 12)<b><br></b>An
+ extra mode has been added and operates in much the same way as the 
+normal RC control. The difference is the addition of a new timeout 
+feature. If a RC pulse is not detected for a period in excess of 200ms, 
+then the motor will be stop being driven until a valid RC signal is 
+received</p><p><b>I2C Mode</b><br>I2C mode allows the MD03 to be 
+connected to popular controllers such as the PICAXE, OOPic and BS2p, and
+ a wide range of micro-controllers like PIC's, 8051's and H8's. There 
+are instructions for connecting the MD03 to the OOPic <a href="http://www.robot-electronics.co.uk/htm/md03oopic.htm">here</a>.
+ If you're writing your own code in C, then we have some downloadable 
+software to communicate with the CMPS03 compass module, SRF08 sonar and 
+MD03 motor driver <a href="http://www.robot-electronics.co.uk/files/i2cdrv.c">here</a>.<br></p><p align="center"><img src="md03tech_files/md03_i2c.GIF" border="0" height="182" width="565"></p><p align="left">I2C
+ communication protocol with the MD03 module is the same as popular 
+eeprom's such as the 24C04. To read one or more of the MD03 registers, 
+first send a start bit, the module address (0XB0 is the base address) 
+with the read/write bit low, then the register number you wish to read. 
+This is followed by a repeated start and the module address again with 
+the read/write bit high (0XB1). You now read one more registers. The 
+MD03 has 8 registers numbered 0 to 7 as follows;</p><div align="center"><center><table bgcolor="#CCFFCC" border="1" cellpadding="0" cellspacing="0" width="630"><tbody><tr><td align="center"><p align="center">Register Address</p></td><td align="center"><p align="center">Name</p></td><td align="center">Read/Write</td><td align="center" width="60%"><p align="center">Description</p></td></tr><tr><td align="center"><p align="center">0</p></td><td align="center"><p align="center">Command</p></td><td align="center">R/W</td><td align="center" width="60%"><p align="center">Write 01 Forwards - 02 Reverse<br>&nbsp;(00 for instant stop - Rev9 firmware only)</p></td></tr><tr><td align="center"><p align="center">1</p></td><td align="center"><p align="center">Status</p></td><td align="center">Read only</td><td align="center" width="60%"><p align="center">Acceleration, Temperature and Current Status</p></td></tr><tr><td align="center"><p align="center">2</p></td><td align="center"><p align="center">Speed</p></td><td align="center">R/W</td><td align="center" width="60%"><p align="center">Motor Speed 0-255 (0x00 - 0xFF)</p></td></tr><tr><td align="center"><p align="center">3</p></td><td align="center"><p align="center">Acceleration</p></td><td align="center">R/W</td><td align="center" width="60%"><p align="center">Motor Acceleration 0-255 (0x00 - 0xFF)</p></td></tr><tr><td align="center"><p align="center">4</p></td><td align="center"><p align="center">Temperature</p></td><td align="center">Read only</td><td align="center" width="60%"><p align="center">Module temperature</p></td></tr><tr><td align="center"><p align="center">5</p></td><td align="center"><p align="center">Motor Current</p></td><td align="center">Read only</td><td align="center" width="60%"><p align="center">Motor Current</p></td></tr><tr><td align="center"><p align="center">6</p></td><td align="center"><p align="center">Unused</p></td><td align="center">Read only</td><td align="center" width="60%"><p align="center">Read as zero</p></td></tr><tr><td align="center"><p align="center">7</p></td><td align="center"><p align="center">Software Revision</p></td><td align="center">Read only</td><td align="center" width="60%"><p align="center">Software Revision Number- Currently 9</p></td></tr></tbody></table></center></div><p>Command Register<br>Controls
+ the motor start, stop and direction. Write 1 to drive forwards, Write 2
+ to reverse, Write 0 to stop instantly (Rev 9 only). Be sure to have set
+ the speed and acceleration before issuing these commands. Do not write 0
+ to the command register to stop on firmware revisions earlier than 
+9.&nbsp;<br>Note - On all revisions the way to stop the motor is the 
+same as other speed changes, write the new speed to the speed register 
+and re-issue the direction command. This will cause the motor to 
+decelerate to a stop at the rate set by the acceleration register. On 
+Rev 9 firmware, writing zero the command register will stop the motor 
+instantly, bypassing the acceleration value.</p><p>Status Register<br>Shows the status of the MD03</p><div align="center"><center><table bgcolor="#CCFFCC" border="1" cellpadding="0" cellspacing="0" width="73%"><tbody><tr><td align="center" width="12%">Bit 7 (msb)</td><td align="center" width="12%">6</td><td align="center" width="12%">5</td><td align="center" width="12%">4</td><td align="center" width="13%">3</td><td align="center" width="13%">2</td><td align="center" width="13%">1</td><td align="center" width="13%">Bit 0 (lsb)</td></tr><tr><td align="center" width="12%">Busy</td><td align="center" width="12%">-</td><td align="center" width="12%">-</td><td align="center" width="12%">-</td><td align="center" width="13%">-</td><td align="center" width="13%">over-temperature limiter</td><td align="center" width="13%">over-current limiter</td><td align="center" width="13%">Acceleration in progress</td></tr></tbody></table></center></div><p>Bit
+ 0 is read as high when the drive is still accelerating the motor to the
+ requested speed. It will be cleared when the requested speed is 
+achieved or the over current or over temperature limiters are active.<br>Bit
+ 1 set high indicates that the current through the motor has reached 
+20Amps and is being limited to that value. The Red LED will be 
+illuminated when this happens.<br>Bit 2 set high indicates that the over
+ temperature limiter is active. Above a preset threshold, the motor 
+current will be reduced in proportion to the MD03 temperature. The 
+module can still be used but the motor power will be limited. The Red 
+LED will be illuminated when this happens. It should be noted that a few
+ minutes of running continuously at 20A will cause the heatsink to get 
+hot - watch your fingers!<br>Bit 7 is the busy flag. It is set high when
+ you issue a new command to the module. It is cleared very quickly and 
+you are unlikely ever to see it set.</p><p>Speed Register<br>Sets the 
+maximum speed that the motor will accelerate to. It is actually the 
+8-bit value sent to the modules PWM controller. Write a value of 0 to 
+243 (numbers from 243 to 255 are clamped to 243) . The larger the 
+number, the more power is applied to the motor.&nbsp;</p><p>Acceleration Register<br>This
+ sets the rate at which the motor accelerates or decelerates from where 
+it is towards the new speed set by the speed register. Write a value of 0
+ to 255, the larger the number the longer the module will take to reach 
+the new speed. Writing zero to the acceleration register will allow 
+maximum acceleration of 0 to full in 0.187 seconds. This value actually 
+controls a timer which steps the current motor speed towards the 
+requested motor speed. It does this every (((acceleration 
+register)*125)+768)uS. A value of zero gives 768uS/step or 
+243*768=186624uS (0.187s) to accelerate from 0 to full. A value of 255 
+is ((255*125)+768)*243=7932249uS or just under 8 seconds.</p><p>Temperature Register<br>This
+ is the value used internally to limit the motor current if the module 
+gets too hot. You do not need to read or do anything with it. It does 
+not read degrees, in fact the number goes down as the temperature goes 
+up! It is actually reading the forward voltage drop of a diode located 
+under the 0.003R current sense resistor. The number drops by 1 count 
+approx. every 1.42 degrees C.</p><p>Motor Current<br>This is the value 
+used internally to limit the motor current to 20A. You do not need to 
+read or do anything with it. The value is proportional to motor current,
+ with a value of 186 representing the 20A limit.</p><p>Software Revision number<br>The revision number of the software in the modules PIC16F872 controller - currently 13 as of 1st August 2005.</p><p><b>Mode Switches<br></b>The
+ 4 mode switches set the operating mode of the MD03. They are read once 
+only when the module is powered up. You cannot switch modes while the 
+unit is on.</p><div align="center"><center><table bgcolor="#CCFFCC" border="1" cellpadding="0" cellspacing="0" width="656"><tbody><tr><td align="center" width="195">Mode</td><td align="center" width="114">Switch 1</td><td align="center" width="114">Switch 2</td><td align="center" width="114">Switch 3</td><td align="center" width="115">Switch 4</td></tr><tr><td align="center" width="195">I2C Bus - address 0xB0</td><td align="center" width="114">On</td><td align="center" width="114">On</td><td align="center" width="114">On</td><td align="center" width="115">On</td></tr><tr><td align="center" width="195">I2C Bus - address 0xB2</td><td align="center" width="114">Off</td><td align="center" width="114">On</td><td align="center" width="114">On</td><td align="center" width="115">On</td></tr><tr><td align="center" width="195">I2C Bus - address 0xB4</td><td align="center" width="114">On</td><td align="center" width="114">Off</td><td align="center" width="114">On</td><td align="center" width="115">On</td></tr><tr><td align="center" width="195">I2C Bus - address 0xB6</td><td align="center" width="114">Off</td><td align="center" width="114">Off</td><td align="center" width="114">On</td><td align="center" width="115">On</td></tr><tr><td align="center" width="195">I2C Bus - address 0xB8</td><td align="center" width="114">On</td><td align="center" width="114">On</td><td align="center" width="114">Off</td><td align="center" width="115">On</td></tr><tr><td align="center" width="195">I2C Bus - address 0xBA</td><td align="center" width="114">Off</td><td align="center" width="114">On</td><td align="center" width="114">Off</td><td align="center" width="115">On</td></tr><tr><td align="center" width="195">I2C Bus - address 0xBC</td><td align="center" width="114">On</td><td align="center" width="114">Off</td><td align="center" width="114">Off</td><td align="center" width="115">On</td></tr><tr><td align="center" width="195">I2C Bus - address 0xBE</td><td align="center" width="114">Off</td><td align="center" width="114">Off</td><td align="center" width="114">Off</td><td align="center" width="115">On</td></tr><tr><td align="center" width="195">0v - 2.5v - 5v Analog</td><td align="center" width="114">On</td><td align="center" width="114">On</td><td align="center" width="114">On</td><td align="center" width="115">Off</td></tr><tr><td align="center" width="195">0v - 5v Analog + Direction</td><td align="center" width="114">Off</td><td align="center" width="114">On</td><td align="center" width="114">On</td><td align="center" width="115">Off</td></tr><tr><td align="center" width="195">Radio Control</td><td align="center" width="114">On</td><td align="center" width="114">Off</td><td align="center" width="114">On</td><td align="center" width="115">Off</td></tr></tbody></table></center></div><p>New Mode (from version 12)</p><div align="center"><center><table bgcolor="#CCFFCC" border="1" cellpadding="0" cellspacing="0" width="656"><tbody><tr><td align="center" width="195">Radio Control, timeout on&nbsp;</td><td align="center" width="114">Off</td><td align="center" width="114">Off</td><td align="center" width="114">On</td><td align="center" width="115">Off</td></tr></tbody></table></center></div><p>&nbsp;</p><p>&nbsp;</p><p>All other combinations are invalid, the LED will blink and nothing else will happen.<br>Note
+ that I2C addresses are the upper 7 bits. Bit 0 the the read/write bit, 
+so addresses 0xB0/0xB1 are write/read respectively to the same address.</p><p><b>General Usage<br></b>The
+ MD03 can handle high currents, and you will need to take a few 
+precautions with wiring. It is very important that you do not allow 
+motor current to flow in the logic ground path. Don't assume that just 
+because the Battery, MD03 and Controller grounds are all together, that 
+all is well. If at all possible, use two batteries, one for the logic 
+and and the other for the motor power. Don't connect the battery grounds
+ together, that is already done on the MD03. If you do, then you will 
+only create a ground loop - and problems. The diagram below shows the 
+general idea on keeping the logic and power sides electrically and 
+physically separate from each other.&nbsp;</p><p align="center"><img src="md03tech_files/md03ex1.GIF" border="0" height="162" width="645"></p><p><b>PCB Drill Plan</b><br>The following drawing shows the MD03 mounting hole positions.</p><p align="center"><img src="md03tech_files/xmd03.gif" border="0" height="249" width="462"></p><p align="center">&nbsp;</p><p align="left"><b>Schematics</b><br>The MD03 schematics in GIF format&nbsp; <a href="http://www.robot-electronics.co.uk/images/md03sch1.gif">md03sch1</a>&nbsp; <a href="http://www.robot-electronics.co.uk/images/md03sch2.gif">md03sch2</a></p><p align="left"><b>CPU Code</b><br>For those who wish to, and are able to re-flash the PIC16F872, here is the <a href="http://www.robot-electronics.co.uk/files/md03.hex">Hex</a> (Revision 13)</p><p align="left"><br></p></body></html>
