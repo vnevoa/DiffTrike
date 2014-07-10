@@ -25,9 +25,9 @@
 
 import sys, time
 sys.path.append("../SoapBox")
-import sb2_input, sb2_output, sb2_gui_data
+import sb_input, sb_output, gui_data
 
-tele = sb2_gui_data.Telemetry("192.168.5.202", 11000)
+tele = gui_data.Telemetry("192.168.5.202", 11000)
 print ""
 print "Inputs: ", tele.i.logHeader(), "\n"
 print "Outputs: ", tele.o.logHeader(), "\n"

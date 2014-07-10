@@ -19,13 +19,13 @@
 
 #
 # This implements a graphical application that connects to
-# the Trike controller via a socket to monitor the internal
+# the Trike controller via a network socket to monitor the internal
 # state of the controller in real time. It requires PyGame.
 #
 
 import sys, os, pygame, time, getopt
-sys.path.append("../SoapBox") # sb2_input & sb2_output are shared.
-import sb2_gui_data, sb2_gui_widgets
+sys.path.append("../SoapBox") # input & output are shared.
+import gui_data, gui_widgets
 from pygame.locals import * 
 from pygame.gfxdraw import *
 
@@ -44,48 +44,46 @@ for o, a in opts:
 # do initializations:
 pygame.init()
 
-bg = sb2_gui_widgets.Window()
+bg = gui_widgets.Window()
 
 horiz_divs = 10
 vert_divs = 5
 
 # centre widgets:
-frame = sb2_gui_widgets.Sights(bg, 0.75*bg.width/horiz_divs)
-cross = sb2_gui_widgets.Crosshair(bg)
-gps_radar = sb2_gui_widgets.Azimuth(bg, "GPS", (bg.width/2, 2 * bg.height/7), frame.size/2)
+frame = gui_widgets.Sights(bg, 0.75*bg.width/horiz_divs)
+cross = gui_widgets.Crosshair(bg)
 
 # left widgets:
-left_batt_level = sb2_gui_widgets.Bargraph(bg, "Ubat [V]", (bg.width/horiz_divs -25, bg.height/vert_divs), (12, 36), (30, 2*bg.height/vert_divs), (0, 100, 0))
-left_temp_graph = sb2_gui_widgets.Bargraph(bg, "T [C]", (2*bg.width/horiz_divs -25, bg.height/vert_divs), (10, 50), (25, 2*bg.height/vert_divs), (200, 0, 50))
-left_torque_graph = sb2_gui_widgets.Bargraph(bg, "I [A]", (3*bg.width/horiz_divs -25, bg.height/vert_divs), (0, 20), (30, 2*bg.height/vert_divs), (0,0,200))
-left_pwm_graph = sb2_gui_widgets.Bargraph(bg, "PWM", (4*bg.width/horiz_divs -25, bg.height/vert_divs), (-1, 1), (50, 2*bg.height/vert_divs))
+left_batt_bar = gui_widgets.Bargraph(bg, "Ubat [V]", (bg.width/horiz_divs -25, bg.height/vert_divs), (12, 36), (30, 2*bg.height/vert_divs), (0, 100, 0))
+left_temp_bar = gui_widgets.Bargraph(bg, "T [C]", (2*bg.width/horiz_divs -25, bg.height/vert_divs), (10, 50), (25, 2*bg.height/vert_divs), (200, 0, 50))
+left_torque_bar = gui_widgets.Bargraph(bg, "I [A]", (3*bg.width/horiz_divs -25, bg.height/vert_divs), (0, 20), (30, 2*bg.height/vert_divs), (0,0,200))
+left_pwm_bar = gui_widgets.Bargraph(bg, "PWM", (4*bg.width/horiz_divs -25, bg.height/vert_divs), (-1, 1), (50, 2*bg.height/vert_divs))
 
 # right widgets:
-right_pwm_graph = sb2_gui_widgets.Bargraph(bg, "PWM", (6*bg.width/horiz_divs -25, bg.height/vert_divs), (-1,1), (50, 2*bg.height/vert_divs))
-right_torque_graph = sb2_gui_widgets.Bargraph(bg, "I [A]", (7*bg.width/horiz_divs -25, bg.height/vert_divs), (0, 20), (30, 2*bg.height/vert_divs), (0,0,200))
-right_temp_graph = sb2_gui_widgets.Bargraph(bg, "T [C]", (8*bg.width/horiz_divs -25, bg.height/vert_divs), (10, 50), (25, 2*bg.height/vert_divs), (200, 0, 50))
-right_batt_level = sb2_gui_widgets.Bargraph(bg, "Ubat [V]", (9*bg.width/horiz_divs -25, bg.height/vert_divs), (12, 36), (30, 2*bg.height/vert_divs), (0, 100, 0))
+right_pwm_bar = gui_widgets.Bargraph(bg, "PWM", (6*bg.width/horiz_divs -25, bg.height/vert_divs), (-1,1), (50, 2*bg.height/vert_divs))
+right_torque_bar = gui_widgets.Bargraph(bg, "I [A]", (7*bg.width/horiz_divs -25, bg.height/vert_divs), (0, 20), (30, 2*bg.height/vert_divs), (0,0,200))
+right_temp_bar = gui_widgets.Bargraph(bg, "T [C]", (8*bg.width/horiz_divs -25, bg.height/vert_divs), (10, 50), (25, 2*bg.height/vert_divs), (200, 0, 50))
+right_batt_bar = gui_widgets.Bargraph(bg, "Ubat [V]", (9*bg.width/horiz_divs -25, bg.height/vert_divs), (12, 36), (30, 2*bg.height/vert_divs), (0, 100, 0))
 
 # bottom widgets:
-lateral_acc_graph = sb2_gui_widgets.Bargraph(bg, "Lat.Acc. [G]", (bg.width/2 - frame.size, 3.5*bg.height/vert_divs), (-2.5, 2.5), (frame.size*2, 50), (0,200,0))
 
 
 # data objects:
-log = sb2_gui_data.FileLog("datalog.csv")
+log = gui_data.FileLog("datalog.csv")
 clock = pygame.time.Clock()
-stick = sb2_gui_data.Joystick()
-timer_histo = sb2_gui_data.Histogram()
-input_histo = sb2_gui_data.Histogram()
-proc_histo = sb2_gui_data.Histogram()
-output_histo = sb2_gui_data.Histogram()
-total_histo = sb2_gui_data.Histogram()
+stick = gui_data.Joystick()
+timer_histo = gui_data.Histogram()
+input_histo = gui_data.Histogram()
+proc_histo = gui_data.Histogram()
+output_histo = gui_data.Histogram()
+total_histo = gui_data.Histogram()
 histo_show = False
 paused = False
 remote_control = False
 if testing:
-	tele = sb2_gui_data.DummyTelemetry()
+	tele = gui_data.DummyTelemetry()
 else:
-	tele = sb2_gui_data.Telemetry("192.168.5.202", 11000)
+	tele = gui_data.Telemetry("192.168.5.202", 11000)
 log.write(tele.i.logHeader() + tele.o.logHeader() + "\n")
 screen_width = 1.0 * pygame.display.Info().current_w
 screen_height = 1.0 * pygame.display.Info().current_h
@@ -183,26 +181,24 @@ while True:
 
 	if tele.connected and not histo_show:
 
+		# LEFT
 		if not tele.o.failed_l:
-			left_temp_graph.draw(tele.i.brgLT)
-			left_torque_graph.draw(tele.i.motLC)
-			left_batt_level.draw(tele.i.batLV)
+			left_temp_bar.draw(tele.i.brgLT)
+			left_torque_bar.draw(tele.i.motLC)
+			left_batt_bar.draw(tele.i.batLV)
+		left_pwm_bar.draw(tele.o.l_trq)
 
-		left_pwm_graph.draw(tele.o.l_trq)
-
+		# CENTRE
 		if remote_control or (not remote_control and not tele.i.failed_j):
 			frame.draw()
 			cross.draw()
-		if tele.i.gpsVld:
-			gps_radar.draw(tele.i.gpsHdng, tele.i.gpsSpd)
-		lateral_acc_graph.draw(tele.i.accY)
 
+		# RIGHT
 		if not tele.o.failed_r:
-			right_batt_level.draw(tele.i.batRV)
-			right_torque_graph.draw(tele.i.motRC	)
-			right_temp_graph.draw(tele.i.brgRT)
-
-		right_pwm_graph.draw(tele.o.r_trq)
+			right_batt_bar.draw(tele.i.batRV)
+			right_torque_bar.draw(tele.i.motRC)
+			right_temp_bar.draw(tele.i.brgRT)
+		right_pwm_bar.draw(tele.o.r_trq)
 
 	pygame.display.flip()
 

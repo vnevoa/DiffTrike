@@ -26,11 +26,14 @@ from pygame.locals import *
 
 
 class Text():
-	def __init__(self, txt, x, y, fcolor=(255,255,255), bcolor=(0,0,0)):
-		self.font = pygame.font.SysFont("", 24)
-		self.sf = self.font.render(txt, 0, fcolor, bcolor)
+	def __init__(self, x, y, fcolor=(255,255,255), bcolor=(0,0,0)):
 		self.x = x
 		self.y = y
+		self.bcolor = bcolor
+		self.fcolor = fcolor
+		self.font = pygame.font.SysFont("", 24)
+	def write(self, txt):
+		self.sf = self.font.render(txt, 0, self.fcolor, self.bcolor)
 
 class Window():
 	"""main window behaviour"""
@@ -45,7 +48,8 @@ class Window():
 		self.txt = []
 
 	def write(self, text, x, y):
-		txt = Text(text, x, y)
+		txt = Text(x, y)
+		txt.write(text)
 		self.txt.append(txt)
 		(h, v) = txt.sf.get_size()
 		return (x + h, y + v)
@@ -107,44 +111,66 @@ class Bargraph():
 		self.y = place[1]
 		self.w = size[0]
 		self.h = size[1]
-		self.name = Text(name, self.x, self.y + self.h - 10)
+		self.name = Text(self.x, self.y + self.h - 10)
+		self.name.write(name)
+		self.value = Text(self.x, self.y)
+		self.value.write("0.00")
 		self.color = color
 		self.lims = lims
 		self.mult = 1.0 * lims[1] - lims[0] # making sure it is float.
 
-	def draw(self, value):
-		# erase the whole area:
+	def draw(self, value = 0.0):
+		# "erase" the whole area:
 		pygame.draw.rect( self.bg.sf, self.bg.color, (self.x, self.y, self.w, self.h), 0)
-		# write value text at top:
+		# draw name text at bottom:
+		self.bg.sf.blit(self.name.sf, (self.name.x, self.name.y))
+		# draw the border in between texts:
+		(self.name_w, self.name_h) = self.name.sf.get_size()
+		(self.value_w, self.value_h) = self.value.sf.get_size()
+		pygame.draw.rect(self.bg.sf, self.color, (self.x, self.y + self.value_h, self.w, self.h - self.name_h - self.value_h), 1)
+		# draw the filling inside the border and the value at the top:
+		self.update(value)
+
+	def update(self, value):
+
+		# process value text at top:
 		if (value < self.lims[0]):
 			value = self.lims[0]
-			txt = Text("<" + format(value,"0.2f"), self.x, self.y)
+			self.value.write("<" + format(value,"0.2f"))
 		elif (value > self.lims[1]):
 			value = self.lims[1]
-			txt = Text(">" + format(value,"0.2f"), self.x, self.y)
+			self.value.write(">" + format(value,"0.2f"))
 		else:
-			txt = Text(format(value,"0.2f"), self.x, self.y)
-		self.bg.sf.blit(txt.sf, (txt.x, txt.y))
-		(h, v) = txt.sf.get_size()
-		# write name text at bottom:
-		self.bg.sf.blit(self.name.sf, (self.name.x, self.name.y))
-		(h1, v1) = self.name.sf.get_size()
-		# draw the border in between texts:
-		pygame.draw.rect(self.bg.sf, self.color, (self.x, self.y+v, self.w, self.h-v-v1), 1)
-		# draw the filling inside the border:
-		fillfactor = (value - self.lims[0]) / self.mult
-		if (self.h >= self.w): # vertical bar
-			x = self.x
-			y = self.y + v + (1-fillfactor)*(self.h-v-v1)
-			w = self.w
-			h = fillfactor*(self.h-v-v1)
-		else:                 # horizontal bar
-			x = self.x
-			y = self.y + v
-			w = fillfactor*self.w
-			h = self.h-v-v1
-		pygame.draw.rect( self.bg.sf, self.color, (x, y, w, h), 0)
+			self.value.write(format(value,"0.2f"))
+		# draw it:
+		self.bg.sf.blit(self.value.sf, (self.value.x, self.value.y))
+		(self.value_w, self.value_h) = self.value.sf.get_size()
 
+		# process the bar inside the border:
+		fillfactor = (value - self.lims[0]) / self.mult
+		x = self.x
+		if (self.h >= self.w): # vertical bar
+			y = self.y + self.value_h + (1.0 - fillfactor) * (self.h - self.name_h - self.value_h)
+			w = self.w
+			h = fillfactor * (self.h - self.name_h - self.value_h)
+		else:                 # horizontal bar
+			y = self.y + self.value_h
+			w = fillfactor * self.w
+			h = self.h - self.name_h - self.value_h
+		# draw the filled part:
+		pygame.draw.rect(self.bg.sf, self.color, (x, y, w, h), 0)
+
+		# "erase" the rest:
+		if (self.h >= self.w): # vertical bar
+			y = self.y + self.value_h
+			w = self.w
+			h = (1.0 - fillfactor) * (self.h - self.name_h - self.value_h)
+		else:                 # horizontal bar
+			x = self.x + fillfactor * self.w
+			y = self.y + self.value_h
+			w = (1.0 - fillfactor) * self.w
+			h = self.h - self.name_h - self.value_h
+		pygame.draw.rect(self.bg.sf, (10,10,10), (x, y, w, h), 0)
 
 class Azimuth():
 	"""draws an azimuth circle"""

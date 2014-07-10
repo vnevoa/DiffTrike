@@ -20,7 +20,7 @@
 # It depends on PyGame for the Joystick class.
 #
 
-import pygame, socket, sb2_input, sb2_output, time, thread, struct
+import pygame, socket, sb_input, sb_output, time, thread, struct
 from pygame.joystick import *
 
 
@@ -48,13 +48,15 @@ class Telemetry():
 		self.port = port
 		self.connected = 0
 		self.fresh = 0
-		self.i = sb2_input.inputData()
-		self.o = sb2_output.outputData()
+		self.i = sb_input.inputData()
+		self.o = sb_output.outputData()
 		self.a = 0
 		self.t = time.time()
 		self.blackout_histo = Histogram()
 		self.glitches = 0
 		self.bw = 0.0
+		self.bytes_rx = 0
+		self.bytes_tx = 0
 		thread.start_new_thread(self.receive, ())
 		thread.start_new_thread(self.timer, ())
 
@@ -128,8 +130,8 @@ class DummyTelemetry():
 	def __init__(self):
 		self.connected = 1
 		self.fresh = 1
-		self.i = sb2_input.inputData()
-		self.o = sb2_output.outputData()
+		self.i = sb_input.inputData()
+		self.o = sb_output.outputData()
 		self.t = time.time()
 		self.blackout_histo = Histogram()
 		self.glitches = 0
