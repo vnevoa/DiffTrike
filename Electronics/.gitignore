@@ -1,0 +1,21 @@
+# Sw compilation files
+*.o
+*.lst
+*.map
+*.hex
+*.elf
+*.bin
+
+# Sw debugging with AvrStudio
+*.aps
+*.aws
+
+*.lnk
+
+# KiCAD files
+$*.brd
+*.dcm
+*.rpt
+*.stf
+*.bak
+*.000

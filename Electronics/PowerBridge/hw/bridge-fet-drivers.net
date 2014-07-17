@@ -1,0 +1,395 @@
+# EESchema Netlist Version 1.1 created  31.1.2012 0:25:13
+(
+ ( /4EA1BCA2 $noname  J2 CTRL {Lib=CONN_5}
+  (    1 GND )
+  (    2 /HB1_H )
+  (    3 /HB1_L )
+  (    4 /HB2_L )
+  (    5 /HB2_H )
+ )
+ ( /4EA1BC25 $noname  R11 4.7K {Lib=RX}
+  (    1 /HB2_H )
+  (    2 N-000009 )
+ )
+ ( /4EA1BC24 $noname  R13 330K {Lib=RX}
+  (    1 N-000009 )
+  (    2 GND )
+ )
+ ( /4EA1BC22 TO-126  Q7 BD135 {Lib=NPN_BJT}
+  (    1 GND )
+  (    2 N-000009 )
+  (    3 N-000013 )
+ )
+ ( /4EA1BC21 $noname  Q10 2N3904 {Lib=NPN_BJT}
+  (    1 N-000008 )
+  (    2 N-000007 )
+  (    3 /Vcc )
+ )
+ ( /4EA1BC20 $noname  R14 1K2 {Lib=RX}
+  (    1 /Vcc )
+  (    2 N-000007 )
+ )
+ ( /4EA1BC1F $noname  D8 Z12V {Lib=DIODE_ZENER}
+  (    1 N-000013 )
+  (    2 N-000007 )
+ )
+ ( /4EA1BC1E $noname  J6 FET2_P {Lib=CONN_1}
+  (    1 N-000006 )
+ )
+ ( /4EA1BC1D $noname  R16 10 {Lib=RX}
+  (    1 N-000008 )
+  (    2 N-000006 )
+ )
+ ( /4EA1BC1C $noname  D9 1N4148 {Lib=DIODE}
+  (    1 N-000008 )
+  (    2 N-000007 )
+ )
+ ( /4EA1BC1B $noname  J5 FET2_N {Lib=CONN_1}
+  (    1 N-000014 )
+ )
+ ( /4EA1BC19 $noname  Q9 BD138 {Lib=PNP_BJT}
+  (    1 N-000011 )
+  (    2 N-000010 )
+  (    3 GND )
+ )
+ ( /4EA1BC18 $noname  Q8 BD135 {Lib=NPN_BJT}
+  (    1 N-000011 )
+  (    2 N-000010 )
+  (    3 /Vcc )
+ )
+ ( /4EA1BC17 $noname  D6 1N4148 {Lib=DIODE}
+  (    1 N-000001 )
+  (    2 N-000010 )
+ )
+ ( /4EA1BC13 $noname  R15 10 {Lib=RX}
+  (    1 N-000011 )
+  (    2 N-000014 )
+ )
+ ( /4EA1BC12 $noname  D7 Z15V {Lib=DIODE_ZENER}
+  (    1 GND )
+  (    2 N-000010 )
+ )
+ ( /4EA1BC11 $noname  R12 3K9 {Lib=RX}
+  (    1 /Vcc )
+  (    2 N-000010 )
+ )
+ ( /4EA1BC10 $noname  R9 4.7K {Lib=RX}
+  (    1 /HB2_L )
+  (    2 N-000001 )
+ )
+ ( /4EA1BC0F $noname  Q6 2N3904 {Lib=NPN_BJT}
+  (    1 GND )
+  (    2 N-000001 )
+  (    3 N-000010 )
+ )
+ ( /4E9F717D $noname  R3 4.7K {Lib=RX}
+  (    1 /HB1_H )
+  (    2 N-000019 )
+ )
+ ( /4E9F710F $noname  R5 330K {Lib=RX}
+  (    1 N-000019 )
+  (    2 GND )
+ )
+ ( /4E9F70D3 TO-126  Q2 BD135 {Lib=NPN_BJT}
+  (    1 GND )
+  (    2 N-000019 )
+  (    3 N-000024 )
+ )
+ ( /4E9F70B2 $noname  Q5 2N3904 {Lib=NPN_BJT}
+  (    1 N-000018 )
+  (    2 N-000017 )
+  (    3 /Vcc )
+ )
+ ( /4E9F708B $noname  R6 1K2 {Lib=RX}
+  (    1 /Vcc )
+  (    2 N-000017 )
+ )
+ ( /4E9F7056 $noname  D4 Z12V {Lib=DIODE_ZENER}
+  (    1 N-000024 )
+  (    2 N-000017 )
+ )
+ ( /4E9F703C $noname  J4 FET1_P {Lib=CONN_1}
+  (    1 N-000016 )
+ )
+ ( /4E9F7023 $noname  R8 10 {Lib=RX}
+  (    1 N-000018 )
+  (    2 N-000016 )
+ )
+ ( /4E9F6FE2 $noname  D5 1N4148 {Lib=DIODE}
+  (    1 N-000018 )
+  (    2 N-000017 )
+ )
+ ( /4E9F6A77 $noname  J3 FET1_N {Lib=CONN_1}
+  (    1 N-000025 )
+ )
+ ( /4E2E8A93 $noname  C1 22u {Lib=CX}
+  (    1 /Vcc )
+  (    2 GND )
+ )
+ ( /4E2E899F $noname  D1 1N4148 {Lib=DIODE}
+  (    1 N-000023 )
+  (    2 /Vcc )
+ )
+ ( /4C5A0BCA $noname  Q4 BD138 {Lib=PNP_BJT}
+  (    1 N-000022 )
+  (    2 N-000021 )
+  (    3 GND )
+ )
+ ( /4C5A0B63 $noname  Q3 BD135 {Lib=NPN_BJT}
+  (    1 N-000022 )
+  (    2 N-000021 )
+  (    3 /Vcc )
+ )
+ ( /4C56065C $noname  J1 POWER {Lib=CONN_2}
+  (    1 GND )
+  (    2 N-000023 )
+ )
+ ( /4C55E6B6 $noname  D2 1N4148 {Lib=DIODE}
+  (    1 N-000020 )
+  (    2 N-000021 )
+ )
+ ( /4C55E7D9 $noname  R7 10 {Lib=RX}
+  (    1 N-000022 )
+  (    2 N-000025 )
+ )
+ ( /4C55E6C7 $noname  D3 Z15V {Lib=DIODE_ZENER}
+  (    1 GND )
+  (    2 N-000021 )
+ )
+ ( /4C55E6A8 $noname  R4 3K9 {Lib=RX}
+  (    1 /Vcc )
+  (    2 N-000021 )
+ )
+ ( /4C55E68E $noname  R1 4.7K {Lib=RX}
+  (    1 /HB1_L )
+  (    2 N-000020 )
+ )
+ ( /4C55E681 $noname  Q1 2N3904 {Lib=NPN_BJT}
+  (    1 GND )
+  (    2 N-000020 )
+  (    3 N-000021 )
+ )
+)
+*
+{ Allowed footprints by component:
+$component J2
+ *3*
+$endlist
+$component Q7
+ TO*
+ SOT*
+$endlist
+$component Q10
+ TO*
+ SOT*
+$endlist
+$component D8
+ D?
+ S*
+$endlist
+$component J6
+ *1*
+$endlist
+$component D9
+ D?
+ S*
+$endlist
+$component J5
+ *1*
+$endlist
+$component Q9
+ TO*
+ SOT*
+$endlist
+$component Q8
+ TO*
+ SOT*
+$endlist
+$component D6
+ D?
+ S*
+$endlist
+$component D7
+ D?
+ S*
+$endlist
+$component Q6
+ TO*
+ SOT*
+$endlist
+$component Q2
+ TO*
+ SOT*
+$endlist
+$component Q5
+ TO*
+ SOT*
+$endlist
+$component D4
+ D?
+ S*
+$endlist
+$component J4
+ *1*
+$endlist
+$component D5
+ D?
+ S*
+$endlist
+$component J3
+ *1*
+$endlist
+$component C1
+ SM*
+ C?
+ C1-1
+$endlist
+$component D1
+ D?
+ S*
+$endlist
+$component Q4
+ TO*
+ SOT*
+$endlist
+$component Q3
+ TO*
+ SOT*
+$endlist
+$component D2
+ D?
+ S*
+$endlist
+$component D3
+ D?
+ S*
+$endlist
+$component Q1
+ TO*
+ SOT*
+$endlist
+$endfootprintlist
+}
+{ Pin List by Nets
+Net 1 "" ""
+ D6 1
+ R9 2
+ Q6 2
+Net 2 "/HB2_H" "HB2_H"
+ R11 1
+ J2 5
+ J2 5
+ J2 5
+ J2 5
+Net 3 "/HB2_L" "HB2_L"
+ J2 4
+ J2 4
+ J2 4
+ J2 4
+ R9 1
+Net 4 "/HB1_L" "HB1_L"
+ J2 3
+ R1 1
+Net 5 "/HB1_H" "HB1_H"
+ R3 1
+ J2 2
+Net 6 "" ""
+ R16 2
+ J6 1
+Net 7 "" ""
+ Q10 2
+ D9 2
+ R14 2
+ D8 2
+Net 8 "" ""
+ R16 1
+ D9 1
+ Q10 1
+Net 9 "" ""
+ R13 1
+ Q7 2
+ R11 2
+Net 10 "" ""
+ Q8 2
+ Q9 2
+ Q6 3
+ D6 2
+ R12 2
+ D7 2
+Net 11 "" ""
+ R15 1
+ Q8 1
+ Q9 1
+Net 12 "GND" "GND"
+ Q9 3
+ R13 2
+ Q7 1
+ C1 2
+ Q4 3
+ D7 1
+ J2 1
+ Q6 1
+ R5 2
+ Q2 1
+ Q1 1
+ J1 1
+ D3 1
+Net 13 "" ""
+ D8 1
+ Q7 3
+Net 14 "" ""
+ J5 1
+ R15 2
+Net 15 "/Vcc" "Vcc"
+ Q5 3
+ R6 1
+ R12 1
+ Q3 3
+ D1 2
+ Q8 3
+ C1 1
+ Q10 3
+ R14 1
+ R4 1
+Net 16 "" ""
+ J4 1
+ R8 2
+Net 17 "" ""
+ Q5 2
+ R6 2
+ D4 2
+ D5 2
+Net 18 "" ""
+ R8 1
+ Q5 1
+ D5 1
+Net 19 "" ""
+ R3 2
+ R5 1
+ Q2 2
+Net 20 "" ""
+ Q1 2
+ R1 2
+ D2 1
+Net 21 "" ""
+ D3 2
+ Q3 2
+ Q1 3
+ D2 2
+ Q4 2
+ R4 2
+Net 22 "" ""
+ Q4 1
+ Q3 1
+ R7 1
+Net 23 "" ""
+ J1 2
+ D1 1
+Net 24 "" ""
+ D4 1
+ Q2 3
+Net 25 "" ""
+ R7 2
+ J3 1
+}
+#End

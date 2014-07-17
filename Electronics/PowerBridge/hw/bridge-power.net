@@ -1,0 +1,599 @@
+# EESchema Netlist Version 1.1 created  13.11.2011 3:47:43
+(
+ ( /4EBEB23E $noname  R21 20K {Lib=RX}
+  (    1 N-000029 )
+  (    2 GND )
+ )
+ ( /4EBEAA54 $noname  C11 100n {Lib=CX}
+  (    1 /Vref )
+  (    2 GND )
+ )
+ ( /4EB892C0 $noname  R20 560 {Lib=RX}
+  (    1 /NFET2 )
+  (    2 N-000001 )
+ )
+ ( /4EB892BB $noname  R18 560 {Lib=RX}
+  (    1 N-000027 )
+  (    2 GND )
+ )
+ ( /4EB892AC $noname  R19 560 {Lib=RX}
+  (    1 N-000026 )
+  (    2 /PFET1 )
+ )
+ ( /4EB892A6 $noname  R17 560 {Lib=RX}
+  (    1 /Vcc )
+  (    2 N-000002 )
+ )
+ ( /4EADEC95 $noname  R5 20K {Lib=RX}
+  (    1 N-000025 )
+  (    2 /MGND )
+ )
+ ( /4EB0875F $noname  J3 BCTRL {Lib=BCTRL}
+  (    1 /HB1_H )
+  (    2 /HB2_H )
+  (    3 N-000032 )
+  (    4 /OCA )
+  (    5 /Isens )
+  (    6 /Vcc )
+  (    7 N-000031 )
+  (    8 /TEMP )
+  (    9 /+5V )
+  (   10 GND )
+  (   11 //RESET )
+  (   12 /SDA )
+  (   13 /HB1_L )
+  (   14 /SCL )
+  (   15 /HB2_L )
+ )
+ ( /4EB08392 $noname  D6 LED {Lib=LED}
+  (    1 N-000001 )
+  (    2 GND )
+ )
+ ( /4EB08388 $noname  D4 LED {Lib=LED}
+  (    1 N-000002 )
+  (    2 /PFET2 )
+ )
+ ( /4EB08371 $noname  D3 LED {Lib=LED}
+  (    1 /Vcc )
+  (    2 N-000026 )
+ )
+ ( /4EB0836C $noname  D5 LED {Lib=LED}
+  (    1 /NFET1 )
+  (    2 N-000027 )
+ )
+ ( /4EB08185 $noname  J2 ISP {Lib=CONN_5}
+  (    1 GND )
+  (    2 //RESET )
+  (    3 /SDA )
+  (    4 /HB1_L )
+  (    5 /SCL )
+ )
+ ( /4EB00E52 $noname  R13 2K2 {Lib=RX}
+  (    1 N-000021 )
+  (    2 /Isens )
+ )
+ ( /4EAFFED3 $noname  P2 BMDRIVERS {Lib=CONN_11}
+  (    1 GND )
+  (    2 /Vcc )
+  (    3 GND )
+  (    4 /HB1_H )
+  (    5 /HB1_L )
+  (    6 /HB2_L )
+  (    7 /HB2_H )
+  (    8 /NFET1 )
+  (    9 /PFET1 )
+  (   10 /NFET2 )
+  (   11 /PFET2 )
+ )
+ ( /4EAFEEAE $noname  D9 1N4148 {Lib=DIODE}
+  (    1 N-000017 )
+  (    2 N-000029 )
+ )
+ ( /4EAFEE84 $noname  C8 1u {Lib=CX}
+  (    1 N-000029 )
+  (    2 GND )
+ )
+ ( /4EAFEE49 $noname  C7 100n {Lib=CX}
+  (    1 /TEMP )
+  (    2 GND )
+ )
+ ( /4EAFE9A0 $noname  J5 Inter5V {Lib=CONN_2}
+  (    1 /+5V )
+  (    2 /V5 )
+ )
+ ( /4EAFE888 $noname  U2 LM393 {Lib=LM393}
+  (    1 ? )
+  (    2 GND )
+  (    3 GND )
+  (    4 GND )
+  (    5 /Vref )
+  (    6 /Isens )
+  (    7 /OCA )
+  (    8 /+5V )
+ )
+ ( /4EAFE7B0 $noname  C5 100n {Lib=CX}
+  (    1 /V0.6 )
+  (    2 GND )
+ )
+ ( /4EAFE784 $noname  D1 1N4148 {Lib=DIODE}
+  (    1 /V0.6 )
+  (    2 GND )
+ )
+ ( /4EAFE774 $noname  R11 3K3 {Lib=RX}
+  (    1 /V0.6 )
+  (    2 /+5V )
+ )
+ ( /4EAFE64C $noname  R12 2K2 {Lib=RX}
+  (    1 /V0.6 )
+  (    2 N-000009 )
+ )
+ ( /4EAFE5EF $noname  P1 1K {Lib=RVAR}
+  (    1 N-000009 )
+  (    2 GND )
+  (    3 /Vref )
+ )
+ ( /4EAFE4FA $noname  C10 100n {Lib=CX}
+  (    1 /V5 )
+  (    2 GND )
+ )
+ ( /4EAFE4E6 $noname  U3 78L05 {Lib=LINREGX}
+  (    1 N-000029 )
+  (    2 GND )
+  (    3 /V5 )
+ )
+ ( /4EAFE4CD $noname  D8 12V {Lib=DIODE_ZENER}
+  (    1 N-000017 )
+  (    2 /Vcc )
+ )
+ ( /4EAFE433 $noname  C4 1u {Lib=CX}
+  (    1 /Vcc )
+  (    2 /MGND )
+ )
+ ( /4EAFE3C7 $noname  C2 1u {Lib=CX}
+  (    1 /Vcc )
+  (    2 /MGND )
+ )
+ ( /4EADEEDA $noname  D7 1N4148 {Lib=DIODE}
+  (    1 /TEMP )
+  (    2 GND )
+ )
+ ( /4EADEEB9 $noname  R16 3K3 {Lib=RX}
+  (    1 /+5V )
+  (    2 /TEMP )
+ )
+ ( /4EADEDEC $noname  R10 20K {Lib=RX}
+  (    1 N-000010 )
+  (    2 /MGND )
+ )
+ ( /4EADEDEB $noname  R7 10 {Lib=RX}
+  (    1 N-000013 )
+  (    2 /NFET2 )
+ )
+ ( /4EADEDEA $noname  R8 10 {Lib=RX}
+  (    1 N-000010 )
+  (    2 /NFET2 )
+ )
+ ( /4EADEDE9 $noname  Q6 IRF3205 {Lib=MOSFET_N}
+  (    G N-000010 )
+  (    S /MGND )
+  (    D /HB2_OUT )
+ )
+ ( /4EADEDE7 $noname  C3 330u {Lib=CX}
+  (    1 /Vcc )
+  (    2 GND )
+ )
+ ( /4EADEDE6 $noname  Q5 IRF3205 {Lib=MOSFET_N}
+  (    G N-000013 )
+  (    S /MGND )
+  (    D /HB2_OUT )
+ )
+ ( /4EADEDE3 $noname  Q4 IRF4905 {Lib=MOSFET_P}
+  (    G /PFET2 )
+  (    S /Vcc )
+  (    D /HB2_OUT )
+ )
+ ( /4EADEDE2 $noname  R6 20K {Lib=RX}
+  (    1 /Vcc )
+  (    2 /PFET2 )
+ )
+ ( /4EADEDE1 $noname  R9 20K {Lib=RX}
+  (    1 N-000013 )
+  (    2 /MGND )
+ )
+ ( /4EADEC1E $noname  R2 10 {Lib=RX}
+  (    1 N-000015 )
+  (    2 /NFET1 )
+ )
+ ( /4EADEBE5 $noname  R3 10 {Lib=RX}
+  (    1 N-000025 )
+  (    2 /NFET1 )
+ )
+ ( /4EADE9DF $noname  Q3 IRF3205 {Lib=MOSFET_N}
+  (    G N-000025 )
+  (    S /MGND )
+  (    D /HB1_OUT )
+ )
+ ( /4E9F664C $noname  C1 330u {Lib=CX}
+  (    1 /Vcc )
+  (    2 GND )
+ )
+ ( /4E2B05ED $noname  D2 5V1 {Lib=DIODE_ZENER}
+  (    1 GND )
+  (    2 N-000021 )
+ )
+ ( /4C5A0DD4 $noname  Q2 IRF3205 {Lib=MOSFET_N}
+  (    G N-000015 )
+  (    S /MGND )
+  (    D /HB1_OUT )
+ )
+ ( /4C576DC6 $noname  C6 10n {Lib=CX}
+  (    1 N-000021 )
+  (    2 GND )
+ )
+ ( /4C576D9E $noname  R14 2K2 {Lib=RX}
+  (    1 /MGND )
+  (    2 N-000021 )
+ )
+ ( /4C56078E $noname  R15 7m5 {Lib=RX}
+  (    1 /MGND )
+  (    2 GND )
+ )
+ ( /4C56065C $noname  J1 POWER {Lib=CONN_2}
+  (    1 GND )
+  (    2 /Vcc )
+ )
+ ( /4C55F1C0 $noname  Q1 IRF4905 {Lib=MOSFET_P}
+  (    G /PFET1 )
+  (    S /Vcc )
+  (    D /HB1_OUT )
+ )
+ ( /4C55F17F $noname  R1 20K {Lib=RX}
+  (    1 /Vcc )
+  (    2 /PFET1 )
+ )
+ ( /4C55E7EC $noname  R4 20K {Lib=RX}
+  (    1 N-000015 )
+  (    2 /MGND )
+ )
+)
+*
+{ Allowed footprints by component:
+$component C11
+ SM*
+ C?
+ C1-1
+$endlist
+$component J3
+ *BCTRL*
+$endlist
+$component D6
+ S*
+ *LED*
+$endlist
+$component D4
+ S*
+ *LED*
+$endlist
+$component D3
+ S*
+ *LED*
+$endlist
+$component D5
+ S*
+ *LED*
+$endlist
+$component J2
+ *3*
+$endlist
+$component D9
+ D?
+ S*
+$endlist
+$component C8
+ SM*
+ C?
+ C1-1
+$endlist
+$component C7
+ SM*
+ C?
+ C1-1
+$endlist
+$component C5
+ SM*
+ C?
+ C1-1
+$endlist
+$component D1
+ D?
+ S*
+$endlist
+$component C10
+ SM*
+ C?
+ C1-1
+$endlist
+$component D8
+ D?
+ S*
+$endlist
+$component C4
+ SM*
+ C?
+ C1-1
+$endlist
+$component C2
+ SM*
+ C?
+ C1-1
+$endlist
+$component D7
+ D?
+ S*
+$endlist
+$component C3
+ SM*
+ C?
+ C1-1
+$endlist
+$component C1
+ SM*
+ C?
+ C1-1
+$endlist
+$component D2
+ D?
+ S*
+$endlist
+$component C6
+ SM*
+ C?
+ C1-1
+$endlist
+$endfootprintlist
+}
+{ Pin List by Nets
+Net 1 "" ""
+ R20 2
+ D6 1
+Net 2 "" ""
+ R17 2
+ D4 1
+Net 3 "/SDA" "SDA"
+ J3 12
+ J3 12
+ J2 3
+Net 4 "/HB1_L" "HB1_L"
+ J3 13
+ J3 13
+ J3 13
+ J3 13
+ J3 13
+ P2 5
+ J3 13
+ J3 13
+ J3 13
+ J2 4
+ J2 4
+ J2 4
+ J2 4
+Net 5 "/HB2_L" "HB2_L"
+ J3 15
+ J3 15
+ P2 6
+Net 6 "/Isens" "Isens"
+ R13 2
+ J3 5
+ J3 5
+ J3 5
+ J3 5
+ J3 5
+ J3 5
+ J3 5
+ J3 5
+ U2 6
+Net 7 "/V5" "V5"
+ C10 1
+ U3 3
+ J5 2
+Net 8 "/V0.6" "V0.6"
+ C5 1
+ R11 1
+ D1 1
+ R12 1
+Net 9 "" ""
+ R12 2
+ P1 1
+Net 10 "" ""
+ R10 1
+ R8 1
+ Q6 G
+Net 11 "/MGND" "MGND"
+ Q5 S
+ Q6 S
+ R15 1
+ R14 1
+ R9 2
+ R10 2
+ R4 2
+ Q3 S
+ C2 2
+ Q2 S
+ R5 2
+ C4 2
+Net 12 "/HB2_OUT" "HB2_OUT"
+ Q4 D
+ Q5 D
+ Q6 D
+Net 13 "" ""
+ Q5 G
+ R7 1
+ R9 1
+Net 14 "/HB1_OUT" "HB1_OUT"
+ Q1 D
+ Q3 D
+ Q2 D
+Net 15 "" ""
+ R2 1
+ R4 1
+ Q2 G
+Net 16 "/+5V" "+5V"
+ R16 1
+ J5 1
+ R11 2
+ J3 9
+ J3 9
+ U2 8
+Net 17 "" ""
+ D9 1
+ D8 1
+Net 18 "/OCA" "OCA"
+ U2 7
+ J3 4
+ J3 4
+ J3 4
+ J3 4
+ J3 4
+ J3 4
+ J3 4
+ J3 4
+Net 19 "/HB1_H" "HB1_H"
+ J3 1
+ P2 4
+ J3 1
+Net 20 "/HB2_H" "HB2_H"
+ J3 2
+ J3 2
+ P2 7
+Net 21 "" ""
+ R14 2
+ R13 1
+ C6 1
+ D2 2
+Net 22 "/SCL" "SCL"
+ J3 14
+ J3 14
+ J2 5
+ J3 14
+ J2 5
+ J2 5
+ J3 14
+ J2 5
+ J3 14
+ J3 14
+ J3 14
+ J3 14
+Net 23 "//RESET" "/RESET"
+ J3 11
+ J3 11
+ J2 2
+ J3 11
+ J3 11
+ J3 11
+ J3 11
+ J3 11
+ J3 11
+Net 24 "GND" "GND"
+ P1 2
+ U2 4
+ J3 10
+ J3 10
+ J3 10
+ J3 10
+ J3 10
+ J3 10
+ J3 10
+ C10 2
+ U3 2
+ D7 2
+ J1 1
+ R18 2
+ C11 2
+ D6 2
+ D1 2
+ C5 2
+ R21 2
+ C1 2
+ U2 4
+ U2 3
+ U2 2
+ C3 2
+ J2 1
+ D2 1
+ R15 2
+ C6 2
+ C7 2
+ C8 2
+ P2 3
+ J3 10
+ P2 1
+Net 25 "" ""
+ R3 1
+ Q3 G
+ R5 1
+Net 26 "" ""
+ R19 1
+ D3 2
+Net 27 "" ""
+ R18 1
+ D5 2
+Net 28 "/Vref" "Vref"
+ C11 1
+ P1 3
+ U2 5
+Net 29 "" ""
+ D9 2
+ R21 1
+ U3 1
+ C8 1
+Net 30 "/Vcc" "Vcc"
+ P2 2
+ J3 6
+ J3 6
+ J1 2
+ R1 1
+ D3 1
+ R6 1
+ C4 1
+ C2 1
+ R17 1
+ Q4 S
+ C1 1
+ U2 8
+ Q1 S
+ C3 1
+ D8 2
+Net 31 "" ""
+ J3 7
+ J3 7
+Net 32 "" ""
+ J3 3
+ J3 3
+Net 33 "/TEMP" "TEMP"
+ C7 1
+ D7 1
+ R16 2
+ J3 8
+ J3 8
+Net 34 "/PFET2" "PFET2"
+ P2 11
+ R6 2
+ Q4 G
+ D4 2
+Net 35 "/NFET2" "NFET2"
+ R20 1
+ R7 2
+ R8 2
+ P2 10
+Net 36 "/PFET1" "PFET1"
+ Q1 G
+ P2 9
+ R19 2
+ R1 2
+Net 37 "/NFET1" "NFET1"
+ D5 1
+ R2 2
+ P2 8
+ R3 2
+}
+#End

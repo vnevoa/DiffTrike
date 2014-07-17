@@ -1,0 +1,1 @@
+See http://yetanotherhackersblog.wordpress.com/2011/04/12/interfacing-the-beagleboard-with-an-attiny85-microcontroller-over-i2c/
