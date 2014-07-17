@@ -1,10 +1,23 @@
 #
-# H-Bridge controller
+# Power H-Bridge Controller
 #
-# Copyright (c) 2011 EmbeddedDreams
+# Copyright (c) 2010-2014 Nuno João
 # http://www.EmbeddedDreams.com
 #
-# $Id: $
+# This file is part of DiffTrike.
+#
+# DiffTrike is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# DiffTrike is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with DiffTrike. If not, see <http://www.gnu.org/licenses/>.
 #
 # Available targets:
 #
@@ -25,18 +38,11 @@ PRG = main
 # Object files. Set the dependencies at the end of this Makefile.
 OBJ = main.o i2c_slave.o
 
-# Add TSLIB options here, if any.
-TSLIB_OPTIONS =
-
 
 ############################################################################
 
-ifeq ($(SCHIPSDKDIR),)
-$(error Missing environment variable SCHIPSDKDIR pointing to SDK installation.)
-endif
-
 # Get the environment.
-include $(SCHIPSDKDIR)sw/Makefile.env
+include Makefile.env
 
 ACPFLAGS = \
 	-mcu=$(MCU_TARGET) \
@@ -46,15 +52,14 @@ OPTIMIZATIONS = \
 	-O2 \
 
 override CFLAGS = \
-	-DI2C_REGISTER_FILE_SIZE=8 \
 	-pipe -g \
-	$(TSLIB_OPTIONS) \
 	-I$(INCDIR) \
 	$(OPTIMIZATIONS) \
 	-Wall \
 	-mmcu=$(MCU_TARGET) \
 	-DF_CPU=$(F_CPU) \
 	-Werror \
+	-DI2C_REGISTER_FILE_SIZE=8 \
 	-DUSE_DON_TWI=$(USE_DON_TWI) \
 #	-DDEBUG \
 
@@ -66,7 +71,7 @@ override LDFLAGS = -Wl,-Map,$(PRG).map
 
 #===========================================================================
 
-.PHONY : all size produce program fuses lockbits build deploy clean $(SCHIPSDKDIR)sw/tslib.a
+.PHONY : all size produce program fuses lockbits build deploy clean
 
 # Default action: build the software.
 all: build
@@ -74,7 +79,7 @@ all: build
 build: $(PRG).elf lst hex bin size
 
 
-$(PRG).elf: $(OBJ) $(SCHIPSDKDIR)sw/tslib.a
+$(PRG).elf: $(OBJ)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
 size:
@@ -93,25 +98,6 @@ bin:  $(PRG).bin
 %.bin: %.elf
 	$(OBJCOPY) -j .text -j .data -O binary $< $@
 
-# Eliminate the implicit compilation rule, so that we can
-# "override" the normal pipeline with a different build sequence.
-%.o: %.c
-
-# Preprocess a C file, then pass it through the AVR-C Preprocessor.
-%.i: %.c
-	$(CC) $(CFLAGS) -E -o $@.tmp $<
-	$(AVRCPP) $(ACPFLAGS) -in=$@.tmp -out=$@
-	$(RM) $@.tmp
-
-# After AVRCPP, proceed with the compilation.
-%.o: %.i
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-# Rule to build TSLib.
-$(SCHIPSDKDIR)sw/tslib.a:
-	$(MAKE) --directory=$(SCHIPSDKDIR)sw \
-		MCU_TARGET=$(MCU_TARGET) F_CPU=$(F_CPU) TSLIB_OPTIONS=$(TSLIB_OPTIONS)
-
 #===========================================================================
 
 # Build, set the fuses and burn the program in the uC.
@@ -129,9 +115,6 @@ UNIXPWDPATH = $(shell pwd | cut -c3- | sed -e "s/\\\// /g")
 
 # Deploy the project.
 deploy:
-	#sed -e "s/@@DEVDIR@@/[file join \\/$(UNIXPWDPATH)]/g" < ED1021_GUI.tcl > ED1021Gui.tcl
-	#$(TCLTKFREEWRAP) ED1021Gui.tcl -f extraFilesToWrap.txt -i ED1021Gui.ico -o ED1021Gui.exe
-	#$(GZIP) -c -9 ED1021Gui.exe > ED1021Gui.gz
 	#@echo "### DEPLOY COMPLETED ###"
 
 # Enable FLASH/EEPROM protection options (no read, no write).
@@ -158,7 +141,6 @@ help:
 	@echo "F_CPU = $(F_CPU)"
 	@echo "PRG = $(PRG)"
 	@echo "OBJ = $(OBJ)"
-	@echo "TSLIB_OPTIONS = $(TSLIB_OPTIONS)"
 	@echo "CFLAGS = $(CFLAGS)"
 	@echo "LDFLAGS = $(LDFLAGS)"
 
@@ -175,7 +157,6 @@ clean:
 	-$(RM) *.i.i
 	-$(RM) *.s
 	-$(RM) *.bak
-	-$(RM) ED1021Gui.tcl ED1021Gui.gz ED1021Gui.exe
 
 ############################################################################
 ## Add here any dependencies you need.
