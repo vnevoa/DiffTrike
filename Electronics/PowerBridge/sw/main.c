@@ -61,6 +61,8 @@
 #define PWM_VALUE_HB1           OCR1A
 #define PWM_VALUE_HB2           OCR1B
 
+#define PWM_MARGIN              18
+
 
 #define PortRead(port_letter, bits)     (PIN ## port_letter & (bits))
 #define PortSet(port_letter, bits)      PORT ## port_letter |= (bits)
@@ -156,6 +158,14 @@ static byte  gCurrSpeed = 0;
 static byte  gCurrAcc = 0;
 
 static word  gAdc[8];
+
+
+// Our own sleep function. AVR libc's sleep_mode() will always enable sleep mode on
+// entry and disable it on exit, which takes up 4 instructions. We need that time.
+static inline void sleep (void)
+{
+    asm volatile("sleep");
+}
 
 
 static void delayMs (unsigned short ms)
@@ -262,16 +272,16 @@ static void GoFw (byte val)
     }
     else
     {
-        if (val < 18)
-            val = 18;
-        else if (val > 255-18)
-            val = 255 - 18;
+        if (val < PWM_MARGIN)
+            val = PWM_MARGIN;
+        else if (val > 255-PWM_MARGIN)
+            val = 255 - PWM_MARGIN;
 
         if (gCurrSpeed == 0 || !isFwd())     // is turning-on / reversing now?
         {
             DissipativeBreak();
 
-            PWM_VALUE_HB2 = val - 15;
+            //PWM_VALUE_HB2 = val - 15;
             TIMSK = (TIMSK & ~_BV(OCIE1B)) | _BV(TOIE1) | _BV(OCIE1A);
 
             BotHB1(OFF);
@@ -300,16 +310,16 @@ static void GoBw (byte val)
     }
     else
     {
-        if (val < 18)
-            val = 18;
-        else if (val > 255-18)
-            val = 255 - 18;
+        if (val < PWM_MARGIN)
+            val = PWM_MARGIN;
+        else if (val > 255-PWM_MARGIN)
+            val = 255 - PWM_MARGIN;
 
         if (gCurrSpeed == 0 || isFwd())     // is turning-on / reversing now?
         {
             DissipativeBreak();
 
-            PWM_VALUE_HB1 = val - 15;
+            //PWM_VALUE_HB1 = val - 15;
             TIMSK = (TIMSK & ~_BV(OCIE1A)) | _BV(TOIE1) | _BV(OCIE1B);
 
             BotHB1(OFF);
@@ -494,10 +504,10 @@ ISR (ADC_vect)
             // 14 us / 0.488 us ~ 29
             // ADC 250KHz 1 conv S&H 1.5clk ~ 1/250K * 1.6 ~ 6.5us
             // 6.5 us / 0.488 us ~ 13
-            //if ( (PWM_VALUE_HB1 > 18) && (TCNT1 < PWM_VALUE_HB1 - 18) )
+            //if ( (PWM_VALUE_HB1 > PWM_MARGIN) && (TCNT1 < PWM_VALUE_HB1 - PWM_MARGIN) )
             {
             }
-            //else if ( (PWM_VALUE_HB2 > 18) && (TCNT1 < PWM_VALUE_HB2 - 18) )
+            //else if ( (PWM_VALUE_HB2 > PWM_MARGIN) && (TCNT1 < PWM_VALUE_HB2 - PWM_MARGIN) )
             {
             }
             //else
@@ -572,9 +582,7 @@ static void start_timer_0 (void)
 
 
 /**
- * \brief ADC initialisation
- *
- * ADC frequency is set to 125KHz for 10-bit resolution
+ * ADC initialisation
  */
 static void adc_init (void)
 {
@@ -593,7 +601,9 @@ static void adc_init (void)
 
 #   elif F_CPU==8000000
     // Fadc = 125KHz (adc-prescaler = 64 -> 8MHz / 64 = 125KHz -> 8us)
-    ADCSR |= _BV(ADPS2) | _BV(ADPS1);
+    //ADCSR |= _BV(ADPS2) | _BV(ADPS1);
+    // Fadc = 250KHz (adc-prescaler = 32 -> 8MHz / 32 = 250KHz -> 4us)
+    ADCSR |= _BV(ADPS2) | _BV(ADPS0);
 #   endif
 
     // Enable ADC conversion complete interrupt.
@@ -697,13 +707,13 @@ static inline void ReadMotorCurrent (void)
     byte  failed = 0;
     word  val;
 
-    if (PWM_VALUE_HB1 <= 30)
-        return;
+    //if (PWM_VALUE_HB1 <= PWM_MARGIN)
+    //    return;
 
     // Set the channel and then
     ADMUX = (ADMUX & 0xF0) | 5;     // Isens channel
     // wait for the right moment...
-    byte  trigger_point = PWM_VALUE_HB1 - 15;
+    byte  trigger_point = PWM_VALUE_HB1 - 14;
     // Note: Only the i2c register reflects the user set current speed.
     if (TCNT1 > trigger_point)
         while (TCNT1 > trigger_point);
@@ -713,19 +723,23 @@ static inline void ReadMotorCurrent (void)
     // Now we need to check if we were not interrupted and thus lost the moment.
     // We do the check and start the conversion with interrupts disabled so we
     // know we nailed the right moment.
-    if ((TCNT1 > trigger_point + 8) || !i2c_Get_Reg(eI2cReg_Speed))
+    if (TCNT1 > (byte)(trigger_point + 6))
     {
-        if (!i2c_Get_Reg(eI2cReg_Speed))
-        {
-            i2c_Set_Reg(eI2cReg_MotorCurrent, 0);
-        }
         // failed to start at the right time, so skip, try again next time
         failed = 1;
     }
-    while ( !(ADCSR & _BV(ADIF)) );     // wait end of conversion
+    while ( !(ADCSR & _BV(ADIF)) )     // wait end of conversion
+        ;//sleep();
     ADCSR |= _BV(ADIF);                 // clear ADC interrupt flag
     if (failed)
+    {
         return;
+    }
+    if (!i2c_Get_Reg(eI2cReg_Speed))
+    {
+        i2c_Set_Reg(eI2cReg_MotorCurrent, 0);
+        return;
+    }
 
     byte  prevSREG = SREG;
     cli();
@@ -861,17 +875,20 @@ int __attribute__((noreturn)) main(void)
     }
 
 #   ifdef SIMULATOR
-    i = 31;
-    i2c_Set_Reg(eI2cReg_MotorCurrent, i);
+    i = 5;
+    i2c_Set_Reg(eI2cReg_Speed, i);
     GoFw(i);
 #   endif
+
+    // Sleep mode always ON
+    MCUCR |= _BV(SE);
 
     // Enable interrupts
     sei();
 
     while(1)
     {
-        sleep_mode();
+        //sleep_mode();
         // simple "I'm alive"
         i2c_Set_Reg(eI2cReg_Temperature, i2c_Get_Reg(eI2cReg_Temperature) + 1);
 
@@ -1003,7 +1020,7 @@ int __attribute__((noreturn)) main(void)
         //      1 / 250KHz * 1.5 = 6us
         //      6us / (1/8KHz / 256) = 12.288 ~ 13 TCNT counts
         // ... 13 TCNT counts before TCNT reaches OCRA/B.
-        //ReadMotorCurrent();
+        ReadMotorCurrent();
         // After reading motor current, we read the remaining inputs, one
         // every loop. None of these need to be updated very frequently,
         // in, facto, motor current doesn't need high update rate either

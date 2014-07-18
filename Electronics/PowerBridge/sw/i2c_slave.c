@@ -220,6 +220,8 @@ ISR(USI_START_VECTOR)
 
     // Wait for the start condition to complete. We're in start condition while
     // SCL is high and SDA is low.
+    // This can take like 5us; too much time to be stuck in here doing nothing,
+    // so enable the interrupts.
     while (
         ((PIN_USI & _BV(PIN_USI_SCL)) != 0) &&      // SCL is high
         ((PIN_USI & _BV(PIN_USI_SDA)) == 0)         // SDA is low

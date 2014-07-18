@@ -60,12 +60,7 @@ override CFLAGS = \
 	-DF_CPU=$(F_CPU) \
 	-Werror \
 	-DI2C_REGISTER_FILE_SIZE=8 \
-	-DUSE_DON_TWI=$(USE_DON_TWI) \
 #	-DDEBUG \
-
-ifneq ($(MANDEP),)
-override CFLAGS += -DMANUF_VREF_CAL 
-endif
 
 override LDFLAGS = -Wl,-Map,$(PRG).map
 
@@ -76,7 +71,7 @@ override LDFLAGS = -Wl,-Map,$(PRG).map
 # Default action: build the software.
 all: build
 
-build: $(PRG).elf lst hex bin size
+build: $(PRG).elf lst hex size
 
 
 $(PRG).elf: $(OBJ)
@@ -107,9 +102,7 @@ tproduce: produce
 
 # Target to burn the program in the flash.
 program:
-	avrdude -c avrpt -p t26 -i 35 -E noreset -U flash:w:$(PRG).hex:i
-#	$(BURNER) -e
-#	$(BURNER) -bp $(PRG).hex
+	$(AVRDUDE) -c avrpt -p t26 -i 35 -E noreset -U flash:w:$(PRG).hex:i
 
 # Path to current directory, in components splitted by spaces format.
 UNIXPWDPATH = $(shell pwd | cut -c3- | sed -e "s/\\\// /g")
@@ -135,9 +128,7 @@ rfuses:
 
 help:
 	@echo "Available targets: build, produce, tproduce, fuses, program, lock, setResetAsGpio, deploy, clean"
-	@echo "The MAN/DEP FW can be built by adding 'MANDEP=yes'. Needs 'make manual' clean when switching."
 	@echo "DEVTOOLSDIR = $(DEVTOOLSDIR)"
-	@echo "SCHIPSDKDIR = $(SCHIPSDKDIR)"
 	@echo "MCU_TARGET = $(MCU_TARGET)"
 	@echo "F_CPU = $(F_CPU)"
 	@echo "PRG = $(PRG)"
@@ -146,7 +137,6 @@ help:
 	@echo "LDFLAGS = $(LDFLAGS)"
 
 clean:
-	$(MAKE) --directory=$(SCHIPSDKDIR)sw -f Makefile clean MCU_TARGET=$(MCU_TARGET) F_CPU=$(F_CPU)
 	-$(RM) $(OBJ)
 	-$(RM) $(PRG).elf
 	-$(RM) $(PRG).lst

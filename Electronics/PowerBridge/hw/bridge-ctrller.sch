@@ -1,5 +1,5 @@
-EESchema Schematic File Version 2  date 17.7.2014 1:26:48
-LIBS:ed,device,conn,linear,.\bridge-ctrller.cache
+EESchema Schematic File Version 2  date 18.7.2014 22:42:12
+LIBS:ed,conn,linear,contrib
 EELAYER 24  0
 EELAYER END
 $Descr A4 11700 8267
@@ -13,6 +13,16 @@ Comment2 ""
 Comment3 ""
 Comment4 ""
 $EndDescr
+Text Notes 6850 3800 0    20   ~ 0
+pci
+Text Notes 5250 3750 0    20   ~ 0
+pci
+Text Notes 5150 3650 0    20   ~ 0
+pci
+Text Notes 5150 3550 0    20   ~ 0
+pci
+Text Notes 6700 3900 0    20   ~ 0
+pci
 Text Label 6850 6600 0    39   ~ 0
 NC1
 Text Label 5450 3750 2    39   ~ 0
