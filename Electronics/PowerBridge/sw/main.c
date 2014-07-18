@@ -24,17 +24,19 @@
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
 #include <avr/pgmspace.h>
+#include <avr/eeprom.h>
 #include <util/delay.h>
 #include "i2c_slave.h"
 
 
+//#define SIMULATOR
 //#define DISABLE_ADC
 //#define DISABLE_PWM
 //#define WHITEDOTCHIP
 
 
 // This value can be read from an I2C register
-#define FW_VERSION  0x13        // 0 x <major> <minor>
+#define FW_VERSION  0x14        // 0 x <major> <minor>
 
 #define ON      1
 #define OFF     0
@@ -113,8 +115,12 @@ enum {
 
 // Commands for the Command Register
 enum {
-    // Debug/Test commands
+    // Util commands
     eCmd_Reset = 0,
+    eCmd_SetI2cAddr,
+    eCmd_SetVref,
+    eCmd_GetVref,
+    // Debug commands
     eCmd_GetPinA,
     eCmd_GetPinB,
     eCmd_GetAdc0,
@@ -133,17 +139,31 @@ enum {
 };
 
 
+// Configuration params data structure.
+typedef struct {
+    byte    adcVrefx10;
+    byte    i2cAddr;
+} TEECfg;
+
+
+// Configuration parameters. Usually read from EEPROM.
+static TEECfg  gCfg;
+
+
 //static byte  gCtr = 0;
 
 static byte  gCurrSpeed = 0;
+static byte  gCurrAcc = 0;
 
 static word  gAdc[8];
 
 
 static void delayMs (unsigned short ms)
 {
+#  ifndef SIMULATOR
     while (ms--)
         _delay_ms(1);
+#  endif
 }
 
 
@@ -234,6 +254,7 @@ static inline byte isFwd (void)
 
 static void GoFw (byte val)
 {
+    byte  prevSREG = SREG;
     cli();
     if (val == 0)
     {
@@ -241,10 +262,10 @@ static void GoFw (byte val)
     }
     else
     {
-        if (val < 30)
-            val = 30;
-        else if (val > 255-30)
-            val = 255 - 30;
+        if (val < 18)
+            val = 18;
+        else if (val > 255-18)
+            val = 255 - 18;
 
         if (gCurrSpeed == 0 || !isFwd())     // is turning-on / reversing now?
         {
@@ -265,12 +286,13 @@ static void GoFw (byte val)
         }
     }
     gCurrSpeed = val;
-    sei();
+    SREG = prevSREG;
 }
 
 
 static void GoBw (byte val)
 {
+    byte  prevSREG = SREG;
     cli();
     if (val == 0)
     {
@@ -278,10 +300,10 @@ static void GoBw (byte val)
     }
     else
     {
-        if (val < 30)
-            val = 30;
-        else if (val > 255-30)
-            val = 255 - 30;
+        if (val < 18)
+            val = 18;
+        else if (val > 255-18)
+            val = 255 - 18;
 
         if (gCurrSpeed == 0 || isFwd())     // is turning-on / reversing now?
         {
@@ -302,7 +324,7 @@ static void GoBw (byte val)
         }
     }
     gCurrSpeed = val;
-    sei();
+    SREG = prevSREG;
 }
 
 
@@ -386,6 +408,7 @@ ISR (ADC_vect)
     sei();
 
     byte  admux = ADMUX;
+    byte  VREFx10 = gCfg.adcVrefx10;
     byte  next_chn;
 
     gAdc[admux & 0x07] = val;
@@ -532,9 +555,16 @@ ISR (ADC_vect)
  */
 static void start_timer_0 (void)
 {
+#   if F_CPU==4000000
     // TIMER0: Normal 8-bit Mode 0
-    // Set Clock prescaler to 16.3ms period interrupt
+    // Set Clock prescaler to count at F_CPU/256 -> 4MHz/256/256 ~ 61Hz -> 16.38ms
     TCCR0 = _BV(CS02);
+
+#   elif F_CPU==8000000
+    // TIMER0: Normal 8-bit Mode 0
+    // Set Clock prescaler to count at F_CPU/1024 -> 8MHz/1024/256 ~ 30.5Hz -> 32.77ms
+    TCCR0 = _BV(CS02) | _BV(CS00);
+#   endif
 
     // Enable OVF interrupt
     TIMSK |= _BV(TOIE0);
@@ -548,26 +578,36 @@ static void start_timer_0 (void)
  */
 static void adc_init (void)
 {
-#ifndef DISABLE_ADC
+# ifndef DISABLE_ADC
     // Select 1st channel to sample.
     ADMUX |= 1;
+
     // Select internal 2.7V Vref with decoupling cap at AREF.
     ADMUX |= _BV(REFS1) | _BV(REFS0);
-    // Set ADC prescaler to 32
-    // Fadc = 125KHz (sysclock divided by 32 -> 4MHz / 32 = 125KHz -> 8us)
-    ADCSR |= _BV(ADPS2) | _BV(ADPS0);
-    // Set ADC prescaler to 16
-    // Fadc = 250KHz (sysclock divided by 16 -> 4MHz / 16 = 250KHz -> 4us)
+
+#   if F_CPU==4000000
+    // Fadc = 250KHz (adc-prescaler = 16 -> 4MHz / 16 = 250KHz -> 4us)
     //ADCSR |= _BV(ADPS2);
+    // Fadc = 125KHz (adc-prescaler = 32 -> 4MHz / 32 = 125KHz -> 8us)
+    ADCSR |= _BV(ADPS2) | _BV(ADPS0);
+
+#   elif F_CPU==8000000
+    // Fadc = 125KHz (adc-prescaler = 64 -> 8MHz / 64 = 125KHz -> 8us)
+    ADCSR |= _BV(ADPS2) | _BV(ADPS1);
+#   endif
+
     // Enable ADC conversion complete interrupt.
-//    ADCSR |= _BV(ADIE);
+    //ADCSR |= _BV(ADIE);
+
     // Enable continuous conversions.
     //ADCSR |= _BV(ADFR);
+
     // Enable ADC. It will always be enabled.
     ADCSR |= _BV(ADEN);
+
     // Start a conversion to trigger conversion chain.
-//    ADCSR |= _BV(ADSC);
-#endif
+    //ADCSR |= _BV(ADSC);
+# endif
 }
 
 
@@ -609,24 +649,25 @@ static void ports_init (void)
 
 static void pwm_init (void)
 {
-#ifndef DISABLE_PWM
-    //const unsigned char  ePwmCompareModeMask = 0x3;
-
-    // PWM outputs inverted signal because N-MOSFET drivers are inverting.
-    TCCR1A = 0  //(TCCR1A & ~(ePwmCompareModeMask << COM1A0)) |
-             // OC1x set one prescaled cycle after compare match. Cleared when TCNT = $00.
-             // ~OC1x not connected.
-             //(1 << COM1A1) | (1 << COM1A0) |
-             //_BV(PWM1A)        // Enable PWM
-             ;
-    //TCCR1A = (TCCR1A & ~(ePwmCompareModeMask << COM1B0)) |
-             //(1 << COM1B1) | (1 << COM1B0) |
-             //_BV(PWM1B)        // Enable PWM
-             ;
-    // Nominal frequency: 1: 16KHz, 2: 8KHz, 3: 4KHz, 4: 2KHz
+#   ifndef DISABLE_PWM
+    // Counter only works as a counter.
+    TCCR1A = 0;
+    // Overflow happens at (sysclock / prescaler / (OCRC + 1))
+    // Prescaler: 1: /1, 2: /2, 3: /4, 4: /8
+#   if F_CPU==4000000
+    // Ctr overflow freq: 4MHz / 1 / (255 + 1) = 15.625KHz
+    //                    4MHz / 2 / (255 + 1) =  7.813KHz
+    //                    4MHz / 2 / (249 + 1) =  8.000KHz
     TCCR1B = (TCCR1B & 0xF0) | 2;
+#   elif F_CPU==8000000
+    // Ctr overflow freq: 8MHz / 2 / (255 + 1) = 15.625KHz
+    //                    8MHz / 4 / (255 + 1) =  7.813KHz
+    //                    8MHz / 4 / (249 + 1) =  8.000KHz
+    //                    8MHz / 4 / (199 + 1) = 10.000KHz
+    TCCR1B = (TCCR1B & 0xF0) | 3;
+#   endif
     OCR1C = 0xFF;
-#endif
+#   endif
 }
 
 
@@ -635,19 +676,19 @@ byte volatile gI2C_RegFile[I2C_REGISTER_FILE_SIZE];
 
 static void twi_init (void)
 {
-#ifdef WHITEDOTCHIP
+/*#ifdef WHITEDOTCHIP
     byte  my_i2c_addr = 0x23;
 #else
     byte  my_i2c_addr = 0x22;   //PortRead(A, eI2CaddrSel)? 0x22 : 0x23;        // autoset addr not working, I think is'cause I forgot to set the hw jumper
 #endif
-
+*/
     i2c_Set_Reg(eI2cReg_SwRevision, FW_VERSION);
 
     i2c_Set_Reg_Access(eI2cReg_Command, eI2c_RW);
     i2c_Set_Reg_Access(eI2cReg_Speed, eI2c_RW);
     i2c_Set_Reg_Access(eI2cReg_Acceleration, eI2c_RW);
 
-    i2c_Slave_Initialise(my_i2c_addr);
+    i2c_Slave_Initialise(gCfg.i2cAddr);
 }
 
 
@@ -686,9 +727,10 @@ static inline void ReadMotorCurrent (void)
     if (failed)
         return;
 
+    byte  prevSREG = SREG;
     cli();
     val = ADCW;       // Must be read with interrupts disabled!!!
-    sei();
+    SREG = prevSREG;
     // 5mOhm current sense resistor -> 5 mV/A
     val = VREFx10 * val;            // no overflow; val ~ Vadc * 1000
     val = (val + 2) / 5;            // Motor current, in A x 10
@@ -726,10 +768,69 @@ static word ReadAdc (uint8_t chn)
     while ( !(ADCSR & _BV(ADIF)) );     // wait end of conversion
     ADCSR |= _BV(ADIF);                 // clear ADC interrupt flag
 
+    byte  prevSREG = SREG;
     cli();
     val = ADCW;       // Must be read with interrupts disabled!!!
-    sei();
+    SREG = prevSREG;
     return val;
+}
+
+
+static byte CalcChecksum (void* ptr, byte size)
+{
+    byte  chksum = 0;
+    while (size > 0)
+    {
+        size--;
+        chksum += ((byte*)ptr)[size];
+    }
+    return chksum;
+}
+
+
+// EEPROM start addr of the config
+#define EepromCfgAddr   3
+// 1st byte of the config must be this magic number
+#define EEPROM_MAGIC_NUMBER  0x69
+
+
+static void SaveCfgToEeprom (void)
+{
+    cli();
+    eeprom_busy_wait();
+    eeprom_write_byte((byte*)EepromCfgAddr, EEPROM_MAGIC_NUMBER);
+    eeprom_busy_wait();
+    eeprom_write_block(&gCfg, (byte*)(EepromCfgAddr + 1), sizeof(gCfg));
+    eeprom_busy_wait();
+    eeprom_write_byte((byte*)(EepromCfgAddr + 1 + sizeof(gCfg)),
+                      CalcChecksum(&gCfg, sizeof(gCfg)));
+    sei();
+}
+
+
+// Read config data from the EEPROM.
+// If unable to read config (no config, corrupted, etc) use a default config
+// and return 0, otherwise 1.
+static byte ReadCfgFromEeprom (void)
+{
+    byte  magic = eeprom_read_byte((byte*)EepromCfgAddr);
+    if (magic == EEPROM_MAGIC_NUMBER)
+    {
+        eeprom_read_block(&gCfg, (byte*)(EepromCfgAddr + 1), sizeof(gCfg));
+        byte  stored_chksum = eeprom_read_byte((byte*)(EepromCfgAddr + 1 + sizeof(gCfg)));
+        if (CalcChecksum(&gCfg, sizeof(gCfg)) == stored_chksum)
+        {
+            return 1;     // success
+        }
+    }
+    // Else set a default config.
+
+    // This i2c addr is reserved for the default config.
+    gCfg.i2cAddr = 0x20;
+    gCfg.adcVrefx10 = 28;
+
+    SaveCfgToEeprom();
+    return 0;
 }
 
 
@@ -739,31 +840,34 @@ static word ReadAdc (uint8_t chn)
 int __attribute__((noreturn)) main(void)
 {
     ports_init();
+
+    // Load config params from EEPROM
+    byte  i = ReadCfgFromEeprom();
+
     pwm_init();
     // Init i2c slave interface (do it while interrupts are disabled)
     twi_init();
     adc_init();
     // Initialize TIMER0 to be used as timetick
     start_timer_0();
+
     set_sleep_mode(SLEEP_MODE_IDLE);
 
-    byte  i;
-    for (i = 0; i < 2; i++)
+    // Initial short LED blink, or long if using the default config.
+    for (i = i? 2 : 8; i; i--)
     {
         PortToggle(A, eLED);
-        //delayMs(250);
-        delayMs(1);
+        delayMs(250);
     }
-    i2c_Set_Reg(eI2cReg_MotorCurrent, 31);
-    GoFw(31);
-    //delayMs(1);
+
+#   ifdef SIMULATOR
+    i = 31;
+    i2c_Set_Reg(eI2cReg_MotorCurrent, i);
+    GoFw(i);
+#   endif
 
     // Enable interrupts
     sei();
-    //pwm(ON);
-    /*GoFw(0x80);
-    delayMs(2);
-    GoBw(0x80);*/
 
     while(1)
     {
@@ -792,6 +896,38 @@ int __attribute__((noreturn)) main(void)
 
                 switch (cmd)
                 {
+                    // Util Commands //
+
+                    case eCmd_Reset :
+                        ports_init();
+                        i2c_Set_Reg(eI2cReg_Speed, 0);
+                        cmdVal = 69;  // confirmation value
+                        break;
+
+                    case eCmd_SetI2cAddr :
+                        if (gCurrAcc >= 0x20 && gCurrAcc <= 0x28)
+                        {
+                            gCfg.i2cAddr = gCurrAcc;
+                            SaveCfgToEeprom();
+                            cmdVal = gCurrAcc;  // confirmation value
+                        }
+                        break;
+
+                    case eCmd_SetVref :
+                        if (gCurrAcc >= 22 && gCurrAcc <= 32)
+                        {
+                            gCfg.adcVrefx10 = gCurrAcc;
+                            SaveCfgToEeprom();
+                            cmdVal = gCurrAcc;  // confirmation value
+                        }
+                        break;
+
+                    case eCmd_GetVref :
+                        cmdVal = gCfg.adcVrefx10;
+                        break;
+
+                    // Debug Commands //
+
                     /*case eCmd_SetPwmFreq5KHz :
                     //    pwm_SetFrequency(5000);
                         break;
@@ -811,14 +947,6 @@ int __attribute__((noreturn)) main(void)
                     //    pwm_SetFrequency(18000);
                         break;*/
 
-                    case eCmd_Reset :
-                        ports_init();
-                        i2c_Set_Reg(eI2cReg_Speed, 0);
-                        cmdVal = 69;  // confirmation value
-                        break;
-
-                    // Debug Commands //
-
                     case eCmd_GetPinA :
                         cmdVal = PINA;
                         break;
@@ -834,12 +962,12 @@ int __attribute__((noreturn)) main(void)
                         cmdVal = gAdc[(cmd - eCmd_GetAdc0) & 0x07] >> 2;
                         break;
 
-                    default :
+                    /*default :
                         if ((cmd & 0xF0) == eCmd_SetPwmPres)
                         {
                             cmdVal = cmd & 0x0F;
                             TCCR1B = (TCCR1B & 0xF0) | cmdVal;
-                        }
+                        }*/
                 }
 
                 i2c_Set_Reg(eI2cReg_Command, cmdVal);
@@ -857,7 +985,8 @@ int __attribute__((noreturn)) main(void)
             if (update)
             {
                 byte  val = i2c_Get_Reg(eI2cReg_Speed);
-                if (i2c_Get_Reg(eI2cReg_Acceleration) == 0)
+                gCurrAcc = i2c_Get_Reg(eI2cReg_Acceleration);
+                if (gCurrAcc == 0)
                     GoFw(val);
                 else
                     GoBw(val);
@@ -882,9 +1011,9 @@ int __attribute__((noreturn)) main(void)
         {
             word  val = ReadAdc(4);
             // Vadc = Vcc * 1K / 11K
-            // adc * VREFx10 / 1024 = Vcc * 10 / 11
-            // Vcc * 10 = adc * VREFx10 * 11 / 1024;
-            val = (long)val * VREFx10 * 11 / 1024;
+            // adc * adcVrefx10 / 1024 = Vcc * 10 / 11
+            // Vcc * 10 = adc * adcVrefx10 * 11 / 1024;
+            val = (long)val * gCfg.adcVrefx10 * 11 / 1024;
             val = (val < 100? 0 : val - 100);       // subtract 10V otherwise won't fit 8 bits
             i2c_Set_Reg(eI2cReg_MotorVcc, (byte)val);
     

@@ -30,7 +30,7 @@
 
 # CPU type and frequency (in HZ).
 MCU_TARGET  = attiny26
-F_CPU       = 4000000UL
+F_CPU       = 8000000UL
 
 # Main application name (name of .ELF, .HEX, .BIN, .LST, .MAP).
 PRG = main
@@ -107,8 +107,9 @@ tproduce: produce
 
 # Target to burn the program in the flash.
 program:
-	$(BURNER) -e
-	$(BURNER) -bp $(PRG).hex
+	avrdude -c avrpt -p t26 -i 35 -E noreset -U flash:w:$(PRG).hex:i
+#	$(BURNER) -e
+#	$(BURNER) -bp $(PRG).hex
 
 # Path to current directory, in components splitted by spaces format.
 UNIXPWDPATH = $(shell pwd | cut -c3- | sed -e "s/\\\// /g")
@@ -125,8 +126,8 @@ lockbits:
 # enable preserve EEPROM during chip erase (high fuse byte),
 # enable BOD for 4V.
 fuses:
-	$(BURNER) -fw ffff f0e3
-	$(BURNER) -fw ff e3
+	$(BURNER) -fw ffff f0e4
+	$(BURNER) -fw ff e4
 
 rfuses:
 	$(BURNER) -fr
