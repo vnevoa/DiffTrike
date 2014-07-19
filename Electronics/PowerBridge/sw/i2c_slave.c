@@ -7,6 +7,7 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <util/delay.h>
 #include "i2c_slave.h"
 
 // TWI state machine
@@ -220,8 +221,7 @@ ISR(USI_START_VECTOR)
 
     // Wait for the start condition to complete. We're in start condition while
     // SCL is high and SDA is low.
-    // This can take like 5us; too much time to be stuck in here doing nothing,
-    // so enable the interrupts.
+    // This can take 5us (half I2C clock period @ 100KHz).
     while (
         ((PIN_USI & _BV(PIN_USI_SCL)) != 0) &&      // SCL is high
         ((PIN_USI & _BV(PIN_USI_SDA)) == 0)         // SDA is low

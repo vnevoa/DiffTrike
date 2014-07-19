@@ -30,29 +30,30 @@
 
 
 //#define SIMULATOR
+#define DISABLE_EEPROM_WRITE
+//#define DISABLE_TIMER_TICK
 //#define DISABLE_ADC
 //#define DISABLE_PWM
-//#define WHITEDOTCHIP
 
 
 // This value can be read from an I2C register
-#define FW_VERSION  0x14        // 0 x <major> <minor>
+#define FW_VERSION  0x16        // 0 x <major> <minor>
 
 #define ON      1
 #define OFF     0
 #define true    1
 #define false   0
 
-#define word    unsigned short
+#define word    uint16_t
 #define bool    byte
 
 
-// AVR ADC internal Vref - chip dependant
+/*/ AVR ADC internal Vref - chip dependant
 #ifdef WHITEDOTCHIP
 #   define VREFx10  27     // white dot chip 2.73V
 #else
 #   define VREFx10  28     // no white dot chip
-#endif
+#endif*/
 
 #define MIN_MOTOR_VCC           22  // V
 #define MAX_CURRENT             20  // A
@@ -61,8 +62,9 @@
 #define PWM_VALUE_HB1           OCR1A
 #define PWM_VALUE_HB2           OCR1B
 
-#define PWM_MARGIN              18
+#define MIN_PWM     29
 
+#define PFWMODE     ON
 
 #define PortRead(port_letter, bits)     (PIN ## port_letter & (bits))
 #define PortSet(port_letter, bits)      PORT ## port_letter |= (bits)
@@ -131,12 +133,8 @@ enum {
     eCmd_GetAdc3,
     eCmd_GetAdc4,
     eCmd_GetAdc5,
-    eCmd_SetPwmFreq5KHz,
     eCmd_SetPwmFreq8KHz,
-    eCmd_SetPwmFreq10KHz,
-    eCmd_SetPwmFreq12KHz,
     eCmd_SetPwmFreq15KHz,
-    eCmd_SetPwmFreq18KHz,
     eCmd_SetPwmPres = 0xF0,
 };
 
@@ -148,16 +146,11 @@ typedef struct {
 } TEECfg;
 
 
-// Configuration parameters. Usually read from EEPROM.
+// Configuration parameters.
 static TEECfg  gCfg;
-
-
-//static byte  gCtr = 0;
 
 static byte  gCurrSpeed = 0;
 static byte  gCurrAcc = 0;
-
-static word  gAdc[8];
 
 
 // Our own sleep function. AVR libc's sleep_mode() will always enable sleep mode on
@@ -181,6 +174,15 @@ static void clear_timer_flags (void)
 {
     TIFR |= _BV(TOV1);
     TIFR |= _BV(OCF1A) | _BV(OCF1B);
+}
+
+
+static inline void OCAInterrupt (bool on)
+{
+    if (on)
+        GIMSK |= _BV(PCIE1);
+    else
+        GIMSK &= ~_BV(PCIE1);
 }
 
 
@@ -262,309 +264,145 @@ static inline byte isFwd (void)
 }
 
 
-static void GoFw (byte val)
+static void FwOff (void)
 {
-    byte  prevSREG = SREG;
-    cli();
-    if (val == 0)
+    BotHB1(OFF);
+    _delay_us(1.5);
+    TopHB1(PFWMODE);
+}
+
+
+static void BkwOff (void)
+{
+    BotHB2(OFF);
+    _delay_us(1.5);
+    TopHB2(PFWMODE);
+}
+
+
+// Note: to be invoked with interrupts disabled
+static inline void GoFw (byte val)
+{
+    if (gCurrSpeed == 0 || !isFwd())     // is turning-on / reversing now?
     {
-        AllOff();
-    }
-    else
-    {
-        if (val < PWM_MARGIN)
-            val = PWM_MARGIN;
-        else if (val > 255-PWM_MARGIN)
-            val = 255 - PWM_MARGIN;
+        DissipativeBreak();
 
-        if (gCurrSpeed == 0 || !isFwd())     // is turning-on / reversing now?
-        {
-            DissipativeBreak();
+        TIMSK = (TIMSK & ~_BV(OCIE1B)) | _BV(TOIE1) | _BV(OCIE1A);
 
-            //PWM_VALUE_HB2 = val - 15;
-            TIMSK = (TIMSK & ~_BV(OCIE1B)) | _BV(TOIE1) | _BV(OCIE1A);
+        BotHB1(OFF);
+        BotHB2(OFF);
+        _delay_us(1.6);
+        TopHB2(ON);
 
-            BotHB1(OFF);
-            BotHB2(OFF);
-            _delay_us(1);
-            TopHB2(ON);
-
-            // Make TCNT1 overflow soon. It will then start the PWM cycle,
-            // turning the bottom MOSFET ON, in the overflow interrupt.
-            TCNT1 = 0xf1;
-            clear_timer_flags();
-        }
+        // Make TCNT1 overflow soon. It will then start the PWM cycle,
+        // turning the bottom MOSFET ON, in the overflow interrupt.
+        TCNT1 = 0xf0;
+        clear_timer_flags();
     }
     gCurrSpeed = val;
-    SREG = prevSREG;
 }
 
 
-static void GoBw (byte val)
+// Note: to be invoked with interrupts disabled
+static inline void GoBw (byte val)
 {
-    byte  prevSREG = SREG;
-    cli();
-    if (val == 0)
+    if (gCurrSpeed == 0 || isFwd())     // is turning-on / reversing now?
     {
-        AllOff();
-    }
-    else
-    {
-        if (val < PWM_MARGIN)
-            val = PWM_MARGIN;
-        else if (val > 255-PWM_MARGIN)
-            val = 255 - PWM_MARGIN;
+        DissipativeBreak();
 
-        if (gCurrSpeed == 0 || isFwd())     // is turning-on / reversing now?
-        {
-            DissipativeBreak();
+        TIMSK = (TIMSK & ~_BV(OCIE1A)) | _BV(TOIE1) | _BV(OCIE1B);
 
-            //PWM_VALUE_HB1 = val - 15;
-            TIMSK = (TIMSK & ~_BV(OCIE1A)) | _BV(TOIE1) | _BV(OCIE1B);
+        BotHB1(OFF);
+        _delay_us(1.6);
+        TopHB1(ON);
+        BotHB2(OFF);
 
-            BotHB1(OFF);
-            _delay_us(1);
-            TopHB1(ON);
-            BotHB2(OFF);
-
-            // Make TCNT1 overflow soon. It will then start the PWM cycle,
-            // turning the bottom MOSFET ON
-            TCNT1 = 0xf1;
-            clear_timer_flags();
-        }
+        // Make TCNT1 overflow soon. It will then start the PWM cycle,
+        // turning the bottom MOSFET ON
+        TCNT1 = 0xf0;
+        clear_timer_flags();
     }
     gCurrSpeed = val;
-    SREG = prevSREG;
 }
 
-
-// Check if we can remove this now that we have other periodic interrupts
-ISR (TIMER0_OVF0_vect)
-{
-    //gCtr++;
-}
-
-
-#define PFWMODE  ON
 
 ISR (TIMER1_OVF1_vect)
 {
+    // Don't turn ON OCA still active.
+    if ((PINA & eOCA) == 0)
+    {
+        return;
+    }
+
     if (isFwd())
     {
         // Update duty cycle here, at the beginning of the PWM cycle.
         // This ensures glitch free PWM on duty cycle changes.
         PWM_VALUE_HB1 = gCurrSpeed;
-        //PWM_VALUE_HB2 = gCurrSpeed - 15;
 
         TopHB1(OFF);
-        _delay_us(1.6);
+        _delay_us(1.3);
         BotHB1(ON);
-        /*/ very short duty cycle handled as special case...
-        if (gCurrSpeed < 30)
-        {
-            while (TCNT1 < gCurrSpeed);     // waits up to (30/255)/8KHz ~ 14.7us
-            BotHB1(OFF);
-            _delay_us(0.1);
-            TopHB1(PFWMODE);
-        }*/
     }
     else
     {
         // Update duty cycle here, at the beginning of the PWM cycle.
         // This ensures glitch free PWM on duty cycle changes.
         PWM_VALUE_HB2 = gCurrSpeed;
-        //PWM_VALUE_HB1 = gCurrSpeed - 15;
 
         TopHB2(OFF);
-        _delay_us(1.6);
+        _delay_us(1.3);
         BotHB2(ON);
-        /*/ very short duty cycle handled as special case...
-        if (gCurrSpeed < 30)
-        {
-            while (TCNT1 < gCurrSpeed);     // waits up to (30/255)/8KHz ~ 14.7us
-            BotHB2(OFF);
-            _delay_us(0.1);
-            TopHB2(PFWMODE);
-        }*/
     }
+
+    i2c_Set_Reg(eI2cReg_Status, i2c_Get_Reg(eI2cReg_Status) & (~eStatus_Overcurrent_Limiter));
 }
 
 
 ISR (TIMER1_CMPA_vect)
 {
-    BotHB1(OFF);
-    _delay_us(0.1);
-    TopHB1(PFWMODE);
+    FwOff();
 }
 
 
 ISR (TIMER1_CMPB_vect)
 {
-    BotHB2(OFF);
-    _delay_us(0.1);
-    TopHB2(PFWMODE);
+    BkwOff();
 }
 
 
-#if 0
-//#ifndef DISABLE_ADC
-ISR (ADC_vect)
+ISR(IO_PINS_vect)
 {
-    word  val = ADCW;       // Must be read with interrupts disabled!!!
-
-    // This interrupt can be veeeery long, so we enable interrupts.
-    // The ADC interrupt is re-triggered at the end of this handler,
-    // so there's no danger in getting nested ADC interrupts.
-    sei();
-
-    byte  admux = ADMUX;
-    byte  VREFx10 = gCfg.adcVrefx10;
-    byte  next_chn;
-
-    gAdc[admux & 0x07] = val;
-
-    switch (admux & 0x07)
+    // We'll get also interrupts due to other pins. Filter the state we're
+    // interested in, which is OCA active (= 0).
+    if ((PINA & eOCA) == 0)
     {
-        case 1 :    // eBridgeTemp
-            next_chn = 2;
-            ADMUX = (admux & 0xF0) | next_chn;
-
-            {
-                // 25ºC ~ 0.7V, -2.3mV/ºC
-                // diode temp -> T = 25 - (Vd - T25) / 0.0023
-                // VREFx10 * val / 1024 = Vt * 10
-                // (Vt*10 - 0.7*10) / 0.0023 = T*10
-                short Cnt700mV = (7 * 1024 +VREFx10/2) / VREFx10;  // 25ºC diode Vfw - diode dependant
-                long  CntTemp  = (short)val - Cnt700mV;            // val - 0.7V
-                short DiffDegC = (VREFx10 * CntTemp + 13) / 23;    // diff * 10000 / (0.0023 * 10000)
-                                                                   // x10(Vref) x1024(CntTemp) ~ x10000
-                val = (short)25 - DiffDegC;
-
-                i2c_Set_Reg(eI2cReg_Temperature, (byte)val);
-            }
-
-            if (val > MAX_TEMPERATURE)
-            {
-                i2c_Set_Reg(eI2cReg_Status, i2c_Get_Reg(eI2cReg_Status) | eStatus_Overtemp_Limiter);
-            }
-            else
-            {
-                i2c_Set_Reg(eI2cReg_Status, i2c_Get_Reg(eI2cReg_Status) & (~eStatus_Overtemp_Limiter) );
-            }
-            break;
-
-        case 2 :    // eMotorTemp
-            next_chn = 4;
-            ADMUX = (admux & 0xF0) | next_chn;
-
-            // LM35 -> 10mV/ºC
-            val = (VREFx10 * val * 10 + 512) / 1024;  // no overflow; val = Vadc * 100
-            //if ((admux & 0xF) == 1)
-            //    i2c_Set_Reg(eI2cReg_Temperature, (byte)val);
-            //else
-            {
-                //if (val > i2c_Get_Reg(eI2cReg_Temperature))
-                //    i2c_Set_Reg(eI2cReg_Temperature, (byte)val);
-
-                /*if (i2c_Get_Reg(eI2cReg_Temperature) > MAX_TEMPERATURE)
-                {
-                    i2c_Set_Reg(eI2cReg_Status, i2c_Get_Reg(eI2cReg_Status) | eStatus_Overtemp_Limiter);
-                }
-                else
-                {
-                    i2c_Set_Reg(eI2cReg_Status, i2c_Get_Reg(eI2cReg_Status) & (~eStatus_Overtemp_Limiter) );
-                }*/
-            }
-            break;
-
-        case 4 :    // eVccSense
-            next_chn = 5;     //Isens
-            ADMUX = (admux & 0xF0) | next_chn;
-
-            // Vadc = Vcc * 1K / 11K
-            // adc * VREFx10 / 1024 = Vcc * 10 / 11
-            // Vcc * 10 = adc * VREFx10 * 11 / 1024;
-            //val = (VREFx10 * val +512) / 1024;      // no overflow; val = Vadc * 10
-            //val = (val * 11 * 104 +50) / 100;       // Motor Vcc * 10
-            val = (long)val * VREFx10 * 11 / 1024;
-            val = (val < 100? 0 : val - 100);       // subtract 10V otherwise won't fit 8 bits
-            i2c_Set_Reg(eI2cReg_MotorVcc, (byte)val);
-
-            if (val < MIN_MOTOR_VCC * 10)
-            {
-                i2c_Set_Reg(eI2cReg_Status, i2c_Get_Reg(eI2cReg_Status) | eStatus_UnderVcc_Limiter);
-            }
-            else
-            {
-                i2c_Set_Reg(eI2cReg_Status, i2c_Get_Reg(eI2cReg_Status) & (~eStatus_UnderVcc_Limiter) );
-            }
-
-            // 8KHz PWM -> 125us / 256 = 0.488us
-            // ADC 125KHz 1 conv S&H 1.5clk ~ 1/125K * 1.75 = 14us
-            // 14 us / 0.488 us ~ 29
-            // ADC 250KHz 1 conv S&H 1.5clk ~ 1/250K * 1.6 ~ 6.5us
-            // 6.5 us / 0.488 us ~ 13
-            //if ( (PWM_VALUE_HB1 > PWM_MARGIN) && (TCNT1 < PWM_VALUE_HB1 - PWM_MARGIN) )
-            {
-            }
-            //else if ( (PWM_VALUE_HB2 > PWM_MARGIN) && (TCNT1 < PWM_VALUE_HB2 - PWM_MARGIN) )
-            {
-            }
-            //else
-            {
-                next_chn = 1;
-                ADMUX = (admux & 0xF0) | next_chn;
-                _delay_us(1);
-                //if (i2c_Get_Reg(eI2cReg_MotorCurrent))
-                //    i2c_Set_Reg(eI2cReg_MotorCurrent, i2c_Get_Reg(eI2cReg_MotorCurrent) - 1);
-            }
-            break;
-
-        case 5 :    // eIsense
-            next_chn = 1;
-            ADMUX = (admux & 0xF0) | next_chn;
-
-            i2c_Set_Reg(eI2cReg_Temperature, (byte)val);
-
-            // 5mOhm current sense resistor -> 5 mV/A
-            val = VREFx10 * val;            // no overflow; val ~ Vadc * 1000
-            val = (val + 2) / 5;            // Motor current, in A x 10
-
-            // average the value into the register
-            if (val > 5 || i2c_Get_Reg(eI2cReg_MotorCurrent) < 20)
-            {
-                val = (i2c_Get_Reg(eI2cReg_MotorCurrent) + val) / 2;
-                i2c_Set_Reg(eI2cReg_MotorCurrent, (byte)val);
-            }
-            else if (i2c_Get_Reg(eI2cReg_MotorCurrent))
-                i2c_Set_Reg(eI2cReg_MotorCurrent, i2c_Get_Reg(eI2cReg_MotorCurrent) - 1);
-
-            if (val > MAX_CURRENT * 10)
-            {
-                i2c_Set_Reg(eI2cReg_Status, i2c_Get_Reg(eI2cReg_Status) | eStatus_Overcurrent_Limiter);
-            }
-            else
-            {
-                i2c_Set_Reg(eI2cReg_Status, i2c_Get_Reg(eI2cReg_Status) & (~eStatus_Overcurrent_Limiter) );
-            }
-            break;
-
-        default :
-            next_chn = 0;
-            break;
+        // End the current PWM duty ON.
+        if (isFwd())
+        {
+            FwOff();
+        }
+        else
+        {
+            BkwOff();
+        }
+        // Signal OCA. Bit is reset on the start of every PWM period.
+        i2c_Set_Reg(eI2cReg_Status, i2c_Get_Reg(eI2cReg_Status) | eStatus_Overcurrent_Limiter);
     }
-
-    ADCSR |= _BV(ADSC);
 }
+
+
+#ifndef DISABLE_TIMER_TICK
+EMPTY_INTERRUPT (TIMER0_OVF0_vect)
 #endif
 
 
-
 /** 
- * \brief Timer 0 initialisation
+ * Timer 0 initialisation
  */
 static void start_timer_0 (void)
 {
+# ifndef DISABLE_TIMER_TICK
 #   if F_CPU==4000000
     // TIMER0: Normal 8-bit Mode 0
     // Set Clock prescaler to count at F_CPU/256 -> 4MHz/256/256 ~ 61Hz -> 16.38ms
@@ -578,6 +416,7 @@ static void start_timer_0 (void)
 
     // Enable OVF interrupt
     TIMSK |= _BV(TOIE0);
+# endif
 }
 
 
@@ -594,10 +433,10 @@ static void adc_init (void)
     ADMUX |= _BV(REFS1) | _BV(REFS0);
 
 #   if F_CPU==4000000
-    // Fadc = 250KHz (adc-prescaler = 16 -> 4MHz / 16 = 250KHz -> 4us)
-    //ADCSR |= _BV(ADPS2);
     // Fadc = 125KHz (adc-prescaler = 32 -> 4MHz / 32 = 125KHz -> 8us)
     ADCSR |= _BV(ADPS2) | _BV(ADPS0);
+    // Fadc = 250KHz (adc-prescaler = 16 -> 4MHz / 16 = 250KHz -> 4us)
+    //ADCSR |= _BV(ADPS2);
 
 #   elif F_CPU==8000000
     // Fadc = 125KHz (adc-prescaler = 64 -> 8MHz / 64 = 125KHz -> 8us)
@@ -650,6 +489,9 @@ static void ports_init (void)
 
     // Enable pull-up on OCA (Over Current Alarm) pin.
     PORTA |= eOCA;
+    // Enable pin change interrupt to catch the OverCurrent Alarm.
+    // Need to disable the VCOMP for the interrupt to trigger on OCA's pin.
+    ACSR |= _BV(ACD);
 
     // Enable pull-ups on unused pins, to have stable inputs.
     PORTA |= ePA3;
@@ -702,17 +544,32 @@ static void twi_init (void)
 }
 
 
+
+// This is not good at all and needs further work, but is what I can do now.
 static inline void ReadMotorCurrent (void)
 {
     byte  failed = 0;
     word  val;
 
-    //if (PWM_VALUE_HB1 <= PWM_MARGIN)
-    //    return;
+    // TCNT1 OVFL interrupt takes ~15 TCNT1 cnts, therefore the 0-15 cnt zone
+    // will never be able to get caught by this routine. This means the duty
+    // 0+14 .. 15+14 = 14 .. 29
+    if (gCurrSpeed >= 14 && gCurrSpeed <= 29)
+        return;
 
     // Set the channel and then
     ADMUX = (ADMUX & 0xF0) | 5;     // Isens channel
-    // wait for the right moment...
+
+    // wait for the right moment.
+    // The most demanding reading is motor current. It must be sampled
+    // right before the duty cycle ends (it ends at the compare match
+    // interrupt, when TCNT == OCRA/B). The ADC samples 1.5 ADC-clocks
+    // after conversion start, which means that the ADC conversion must
+    // be triggered ...
+    //  @Fadc=250KHz and @Fpwm=8KHz,
+    //      1 / 250KHz * 1.5 = 6us
+    //      6us / (1/7812.5Hz / 256) = 12 TCNT counts
+    // ... 12 TCNT counts before TCNT reaches OCRA/B.
     byte  trigger_point = PWM_VALUE_HB1 - 14;
     // Note: Only the i2c register reflects the user set current speed.
     if (TCNT1 > trigger_point)
@@ -728,7 +585,7 @@ static inline void ReadMotorCurrent (void)
         // failed to start at the right time, so skip, try again next time
         failed = 1;
     }
-    while ( !(ADCSR & _BV(ADIF)) )     // wait end of conversion
+    while ( !(ADCSR & _BV(ADIF)) )      // wait end of conversion
         ;//sleep();
     ADCSR |= _BV(ADIF);                 // clear ADC interrupt flag
     if (failed)
@@ -737,7 +594,6 @@ static inline void ReadMotorCurrent (void)
     }
     if (!i2c_Get_Reg(eI2cReg_Speed))
     {
-        i2c_Set_Reg(eI2cReg_MotorCurrent, 0);
         return;
     }
 
@@ -746,7 +602,7 @@ static inline void ReadMotorCurrent (void)
     val = ADCW;       // Must be read with interrupts disabled!!!
     SREG = prevSREG;
     // 5mOhm current sense resistor -> 5 mV/A
-    val = VREFx10 * val;            // no overflow; val ~ Vadc * 1000
+    val = gCfg.adcVrefx10 * val;    // no overflow; val ~ Vadc * 1000
     val = (val + 2) / 5;            // Motor current, in A x 10
 
     // average the value into the register
@@ -810,6 +666,7 @@ static byte CalcChecksum (void* ptr, byte size)
 
 static void SaveCfgToEeprom (void)
 {
+#  ifndef DISABLE_EEPROM_WRITE
     cli();
     eeprom_busy_wait();
     eeprom_write_byte((byte*)EepromCfgAddr, EEPROM_MAGIC_NUMBER);
@@ -819,6 +676,7 @@ static void SaveCfgToEeprom (void)
     eeprom_write_byte((byte*)(EepromCfgAddr + 1 + sizeof(gCfg)),
                       CalcChecksum(&gCfg, sizeof(gCfg)));
     sei();
+#  endif
 }
 
 
@@ -875,7 +733,7 @@ int __attribute__((noreturn)) main(void)
     }
 
 #   ifdef SIMULATOR
-    i = 5;
+    i = MIN_PWM;
     i2c_Set_Reg(eI2cReg_Speed, i);
     GoFw(i);
 #   endif
@@ -888,9 +746,9 @@ int __attribute__((noreturn)) main(void)
 
     while(1)
     {
-        //sleep_mode();
+        //sleep();
         // simple "I'm alive"
-        i2c_Set_Reg(eI2cReg_Temperature, i2c_Get_Reg(eI2cReg_Temperature) + 1);
+        //i2c_Set_Reg(eI2cReg_Status, i2c_Get_Reg(eI2cReg_Status) ^ eStatus_Accelerating);
 
         /*if (gCtr == 6)       // 16.3x6 97.8ms ~ 100ms
         {
@@ -921,6 +779,7 @@ int __attribute__((noreturn)) main(void)
                         cmdVal = 69;  // confirmation value
                         break;
 
+#                   ifndef DISABLE_EEPROM_WRITE
                     case eCmd_SetI2cAddr :
                         if (gCurrAcc >= 0x20 && gCurrAcc <= 0x28)
                         {
@@ -931,13 +790,14 @@ int __attribute__((noreturn)) main(void)
                         break;
 
                     case eCmd_SetVref :
-                        if (gCurrAcc >= 22 && gCurrAcc <= 32)
+                        //if (gCurrAcc >= 22 && gCurrAcc <= 32)
                         {
                             gCfg.adcVrefx10 = gCurrAcc;
                             SaveCfgToEeprom();
                             cmdVal = gCurrAcc;  // confirmation value
                         }
                         break;
+#                   endif
 
                     case eCmd_GetVref :
                         cmdVal = gCfg.adcVrefx10;
@@ -945,26 +805,14 @@ int __attribute__((noreturn)) main(void)
 
                     // Debug Commands //
 
-                    /*case eCmd_SetPwmFreq5KHz :
-                    //    pwm_SetFrequency(5000);
-                        break;
-                    case eCmd_SetPwmFreq8KHz :
-                    //    pwm_SetFrequency(8000);
-                        break;
-                    case eCmd_SetPwmFreq10KHz :
-                        pwm_SetFrequency(10000);
-                        break;
-                    case eCmd_SetPwmFreq12KHz :
-                    //    pwm_SetFrequency(12000);
+                    /*case eCmd_SetPwmFreq8KHz :
+                        pwm_SetFrequency(8000);
                         break;
                     case eCmd_SetPwmFreq15KHz :
                         pwm_SetFrequency(15000);
-                        break;
-                    case eCmd_SetPwmFreq18KHz :
-                    //    pwm_SetFrequency(18000);
                         break;*/
 
-                    case eCmd_GetPinA :
+                    /*case eCmd_GetPinA :
                         cmdVal = PINA;
                         break;
                     case eCmd_GetPinB :
@@ -977,7 +825,7 @@ int __attribute__((noreturn)) main(void)
                     case eCmd_GetAdc4 :
                     case eCmd_GetAdc5 :
                         cmdVal = gAdc[(cmd - eCmd_GetAdc0) & 0x07] >> 2;
-                        break;
+                        break;*/
 
                     /*default :
                         if ((cmd & 0xF0) == eCmd_SetPwmPres)
@@ -998,29 +846,43 @@ int __attribute__((noreturn)) main(void)
             {
                 update = 1;
             }
-
             if (update)
             {
-                byte  val = i2c_Get_Reg(eI2cReg_Speed);
+                cli();
                 gCurrAcc = i2c_Get_Reg(eI2cReg_Acceleration);
-                if (gCurrAcc == 0)
-                    GoFw(val);
+                byte  val = i2c_Get_Reg(eI2cReg_Speed);
+                if (val == 0)
+                {
+                    OCAInterrupt(OFF);
+                    AllOff();
+                    i2c_Set_Reg(eI2cReg_MotorCurrent, 0);
+                    i2c_Set_Reg(eI2cReg_Status, 0);
+                }
                 else
-                    GoBw(val);
+                {
+                    OCAInterrupt(ON);
+                    if (val < MIN_PWM)
+                        val = MIN_PWM;
+                    else if (val > 255-MIN_PWM)
+                        val = 255 - MIN_PWM;
+
+                    if (gCurrAcc == 0)
+                        GoFw(val);
+                    else
+                        GoBw(val);
+                }
+                sei();
+                // wait for the new values (speed) to be set on the TCNT1 OVFL
+                // interrupt, otherwise we can get blocked while reading motor
+                // current.
+                delayMs(10);
             }
         }
 
         // ADC readings.
-        // The most demanding reading is motor current. It must be sampled
-        // right before the duty cycle ends (it ends at the compare match
-        // interrupt, when TCNT == OCRA/B). The ADC samples 1.5 ADC-clocks
-        // after conversion start, which means that the ADC conversion must
-        // be triggered ...
-        //  @Fadc=250KHz and @Fpwm=8KHz,
-        //      1 / 250KHz * 1.5 = 6us
-        //      6us / (1/8KHz / 256) = 12.288 ~ 13 TCNT counts
-        // ... 13 TCNT counts before TCNT reaches OCRA/B.
+
         ReadMotorCurrent();
+
         // After reading motor current, we read the remaining inputs, one
         // every loop. None of these need to be updated very frequently,
         // in, facto, motor current doesn't need high update rate either
@@ -1043,34 +905,5 @@ int __attribute__((noreturn)) main(void)
                 i2c_Set_Reg(eI2cReg_Status, i2c_Get_Reg(eI2cReg_Status) & (~eStatus_UnderVcc_Limiter) );
             }
         }
-
-        /*/ Only update if there are no limiting conditions.
-        if ( (i2c_Get_Reg(eI2cReg_Status) & eStatus_Limiter_Mask) == 0 )
-        {
-            byte  val = i2c_Get_Reg(eI2cReg_Speed);
-            if (gDir == 0)
-            {
-                GoFw(val);
-            }
-            else
-            {
-                GoBw(val);
-            }
-        }
-        else
-        {
-            PortSet(A, eLED);
-            AllOff();
-        }*/
-
-        // LED on if any limiting condition ocurring.
-        /*if (i2c_Get_Reg(eI2cReg_Status))
-        {
-            PortSet(A, eLED);
-        }
-        else
-        {
-            PortClear(A, eLED);
-        }*/
     }
 }
