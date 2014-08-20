@@ -1,5 +1,5 @@
-EESchema Schematic File Version 2  date 13.7.2014 2:43:17
-LIBS:ed,conn,linear,contrib,.\bridge-ctrller-addon.cache
+EESchema Schematic File Version 2  date 20.8.2014 1:44:51
+LIBS:ed,conn,linear,contrib
 EELAYER 24  0
 EELAYER END
 $Descr A4 11700 8267
@@ -13,6 +13,10 @@ Comment2 ""
 Comment3 ""
 Comment4 ""
 $EndDescr
+Text Label 6000 3550 0    31   ~ 0
+SCL2
+Text Label 6000 3450 0    31   ~ 0
+SDA2
 Text Notes 6800 2700 0    39   ~ 0
 1mA@5V
 Text Notes 4400 2750 0    39   ~ 0
@@ -176,7 +180,7 @@ Wire Wire Line
 Wire Wire Line
 	4800 3850 3150 3850
 Wire Wire Line
-	3100 3750 3150 3750
+	3150 3750 3100 3750
 Connection ~ 4300 3150
 Wire Wire Line
 	4300 3150 4300 3200
@@ -194,7 +198,7 @@ Wire Wire Line
 	4300 3400 4300 3450
 Connection ~ 3150 3750
 Wire Wire Line
-	3150 3550 3100 3550
+	3100 3550 3150 3550
 Connection ~ 4100 3850
 Wire Wire Line
 	4100 3850 4100 3800
@@ -419,7 +423,7 @@ L RX R10
 U 1 1 539E435F
 P 7000 3550
 F 0 "R10" H 7000 3595 43  0000 C BNN
-F 1 "100" H 7000 3480 43  0000 C CNN
+F 1 "0" H 7000 3480 43  0000 C CNN
 	1    7000 3550
 	-1   0    0    1   
 $EndComp
@@ -737,13 +741,13 @@ L RX R6
 U 1 1 539E4357
 P 6450 3450
 F 0 "R6" H 6450 3495 43  0000 C BNN
-F 1 "100" H 6450 3380 43  0000 C CNN
+F 1 "0" H 6450 3380 43  0000 C CNN
 	1    6450 3450
 	-1   0    0    1   
 $EndComp
-Text Notes 1750 3525 0    47   ~ 0
-SDA1/GND1
 Text Notes 1750 3725 0    47   ~ 0
+SDA1/GND1
+Text Notes 1750 3525 0    47   ~ 0
 SCL1/GND1
 Text Notes 1750 3325 0    47   ~ 0
 Vdd1/GND1
@@ -777,9 +781,9 @@ Text Label 3250 3850 0    39   ~ 0
 GND1
 Text Label 3250 3250 0    39   ~ 0
 Vdd1
-Text Label 3400 3450 2    39   ~ 0
-SDA1
 Text Label 3400 3550 2    39   ~ 0
+SDA1
+Text Label 3400 3450 2    39   ~ 0
 SCL1
 $Comp
 L RX R5
@@ -821,10 +825,10 @@ $Comp
 L ADUM1250 U1
 U 1 1 539E3C02
 P 5400 3500
-F 0 "U1" H 5150 3800 60  0000 C CNN
+F 0 "U1" H 5400 3800 60  0000 C CNN
 F 1 "ADUM1250" H 5350 3200 60  0000 C CNN
 	1    5400 3500
-	1    0    0    -1  
+	-1   0    0    -1  
 $EndComp
 $Comp
 L CONN_6 J1

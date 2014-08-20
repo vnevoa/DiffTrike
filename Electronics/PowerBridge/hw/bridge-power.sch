@@ -1,5 +1,5 @@
-EESchema Schematic File Version 2  date 26.7.2012 3:05:53
-LIBS:ed,device,conn,linear,.\half-bridge-power.cache
+EESchema Schematic File Version 2  date 20.8.2014 1:03:46
+LIBS:ed,device,conn,linear
 EELAYER 24  0
 EELAYER END
 $Descr A4 11700 8267
@@ -630,7 +630,7 @@ L CX C8
 U 1 1 4EAFEE84
 P 9200 3550
 F 0 "C8" H 9250 3630 39  0000 L CNN
-F 1 "1u" H 9250 3470 39  0000 L CNN
+F 1 "22u" H 9250 3470 39  0000 L CNN
 	1    9200 3550
 	1    0    0    -1  
 $EndComp
@@ -1055,7 +1055,7 @@ L CX C6
 U 1 1 4C576DC6
 P 4400 6800
 F 0 "C6" H 4450 6880 39  0000 L CNN
-F 1 "10n" H 4450 6720 39  0000 L CNN
+F 1 "100n" H 4450 6720 39  0000 L CNN
 F 4 "0,12" H 4400 6800 60  0001 C CNN "Cost"
 F 5 "ED" H 4400 6800 60  0001 C CNN "Supplier"
 	1    4400 6800

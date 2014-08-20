@@ -190,10 +190,11 @@ void i2c_Slave_Initialise (byte ownAddress)
  */
 byte i2c_Get_Changed_Mask (void)
 {
+    uint8_t  prevSREG = SREG;
     cli();
     byte  tmp = sChangedRegMask;
     sChangedRegMask = 0;
-    sei();
+    SREG = prevSREG;
     return tmp;
 }
 

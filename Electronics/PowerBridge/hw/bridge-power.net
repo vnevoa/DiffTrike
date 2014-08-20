@@ -1,4 +1,4 @@
-# EESchema Netlist Version 1.1 created  13.11.2011 3:47:43
+# EESchema Netlist Version 1.1 created  20.8.2014 0:22:02
 (
  ( /4EBEB23E $noname  R21 20K {Lib=RX}
   (    1 N-000029 )
@@ -89,7 +89,7 @@
   (    1 N-000017 )
   (    2 N-000029 )
  )
- ( /4EAFEE84 $noname  C8 1u {Lib=CX}
+ ( /4EAFEE84 $noname  C8 22u {Lib=CX}
   (    1 N-000029 )
   (    2 GND )
  )
@@ -234,9 +234,9 @@
   (    1 /MGND )
   (    2 N-000021 )
  )
- ( /4C56078E $noname  R15 7m5 {Lib=RX}
-  (    1 /MGND )
-  (    2 GND )
+ ( /4C56078E $noname  R15 5m {Lib=RX}
+  (    1 GND )
+  (    2 /MGND )
  )
  ( /4C56065C $noname  J1 POWER {Lib=CONN_2}
   (    1 GND )
@@ -411,7 +411,7 @@ Net 10 "" ""
 Net 11 "/MGND" "MGND"
  Q5 S
  Q6 S
- R15 1
+ R15 2
  R14 1
  R9 2
  R10 2
@@ -520,7 +520,7 @@ Net 24 "GND" "GND"
  C3 2
  J2 1
  D2 1
- R15 2
+ R15 1
  C6 2
  C7 2
  C8 2
