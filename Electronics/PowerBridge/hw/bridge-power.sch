@@ -1,5 +1,5 @@
-EESchema Schematic File Version 2  date 20.8.2014 1:03:46
-LIBS:ed,device,conn,linear
+EESchema Schematic File Version 2  date 20.8.2014 22:05:04
+LIBS:ed,device,conn,linear,.\bridge-power.cache
 EELAYER 24  0
 EELAYER END
 $Descr A4 11700 8267
@@ -1081,7 +1081,7 @@ Motor Power Input, 20V to 30V
 Text Notes 1350 1000 0    98   ~ 0
 H-Bridge Power Module
 Text Notes 10700 7650 0    43   ~ 0
-0.1
+1
 $Comp
 L GND #PWR014
 U 1 1 4C56079C

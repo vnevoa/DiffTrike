@@ -1,5 +1,5 @@
-EESchema Schematic File Version 2  date 25.7.2014 15:49:20
-LIBS:ed,conn,linear,contrib
+EESchema Schematic File Version 2  date 20.8.2014 22:03:29
+LIBS:ed,conn,linear,contrib,.\bridge-fet-drivers.cache
 EELAYER 24  0
 EELAYER END
 $Descr A4 11700 8267
@@ -13,6 +13,12 @@ Comment2 ""
 Comment3 ""
 Comment4 ""
 $EndDescr
+Text Notes 1750 3950 0    39   ~ 0
+5V logic levels
+Text Notes 1750 2900 0    39   ~ 0
+24V nominal
+Text Notes 1400 1400 0    98   ~ 0
+Power Bridge MOSFET Drivers
 Connection ~ 8400 3500
 Wire Wire Line
 	8300 3500 8400 3500
@@ -653,7 +659,7 @@ F 5 "Servelec.pt" H 5300 4650 60  0001 C CNN "Supplier"
 	1    0    0    -1  
 $EndComp
 Text Notes 10700 7650 0    43   ~ 0
-0.1
+2
 $Comp
 L GND #PWR1
 U 1 1 4C5606BB

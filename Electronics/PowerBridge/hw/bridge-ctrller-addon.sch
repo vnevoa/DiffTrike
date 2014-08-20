@@ -1,4 +1,4 @@
-EESchema Schematic File Version 2  date 20.8.2014 1:44:51
+EESchema Schematic File Version 2  date 20.8.2014 23:58:23
 LIBS:ed,conn,linear,contrib
 EELAYER 24  0
 EELAYER END
@@ -13,6 +13,12 @@ Comment2 ""
 Comment3 ""
 Comment4 ""
 $EndDescr
+Text Notes 1825 5275 0    39   ~ 0
+NOTE: dni = Do Not Insert
+Text Notes 4325 3425 0    31   ~ 0
+dni
+Text Notes 4625 3425 0    31   ~ 0
+dni
 Text Label 6000 3550 0    31   ~ 0
 SCL2
 Text Label 6000 3450 0    31   ~ 0
@@ -26,7 +32,7 @@ Text Notes 7450 2400 0    39   ~ 0
 Text Notes 3250 2400 0    39   ~ 0
 6mA@3V3
 Text Notes 10720 7660 0    59   ~ 0
-1
+2
 Text Notes 3750 2700 0    31   ~ 0
 green
 Text Notes 4000 3050 0    31   ~ 0
@@ -357,13 +363,13 @@ Wire Wire Line
 Wire Wire Line
 	8600 5200 8750 5200
 Wire Notes Line
-	9150 5050 9250 5050
+	9250 5050 9150 5050
 Wire Notes Line
-	9150 5100 9200 5050
+	9250 5050 9200 5100
 Wire Notes Line
 	9150 5100 9250 5100
 Wire Notes Line
-	9250 5100 9200 5050
+	9200 5100 9150 5050
 Wire Wire Line
 	7050 5400 7050 5250
 Wire Wire Line
@@ -844,13 +850,13 @@ There it will act as a structure stiffener and will do temperature probing.
 Text Notes 1250 1550 0    47   ~ 0
 The add-on is implemented as a board that will attach to both heatsinks on the bridge.
 Text Notes 1250 1450 0    47   ~ 0
-This add-on implements an I2C isolator which also acts as aa voltage converter.
+This add-on implements an I2C isolator which also acts as a voltage converter.
 Text Notes 1250 1350 0    47   ~ 0
 GND bounce and long cables brought some problems with communication with the bridges.
 Text Notes 1250 1250 0    47   ~ 0
 This add-on was born from the need to galvanically isolate the I2C bus.
 Text Notes 1000 950  0    98   ~ 0
-Power Bridge Controller Add--on
+Power Bridge Controller Add-on
 Text Label 8000 3550 0    39   ~ 0
 SDA
 Text Label 8000 3450 0    39   ~ 0
