@@ -37,9 +37,10 @@ extern volatile byte  gI2C_RegFile[I2C_REGISTER_FILE_SIZE];
 
 
 //! Prototypes
-void  i2c_Slave_Initialise (byte ownAddress);
-byte  i2c_Get_Changed_Mask (void);
-void  i2c_Set_Reg_Access (byte idx, byte is_writable);
+void i2c_Slave_Initialise (byte ownAddress);
+byte i2c_Get_Changed_Mask (void);
+void i2c_Set_Reg_Access (byte idx, byte is_writable);
+//void i2c_Process_Overflow_intr (void);
 
 
 inline static byte i2c_Get_Reg (byte idx)

@@ -223,10 +223,16 @@ ISR(USI_START_VECTOR)
     // Wait for the start condition to complete. We're in start condition while
     // SCL is high and SDA is low.
     // This can take 5us (half I2C clock period @ 100KHz).
-    while (
+    byte  ctr = 5000 / 125;
+    while (ctr &&
         ((PIN_USI & _BV(PIN_USI_SCL)) != 0) &&      // SCL is high
         ((PIN_USI & _BV(PIN_USI_SDA)) == 0)         // SDA is low
-    );
+    ) ctr--;
+    if (ctr == 0)
+    {
+        SET_USI_TO_TWI_START_CONDITION_MODE();
+        return;
+    }
 
     if ( !( PIN_USI & _BV(PIN_USI_SDA) ) )
     {
@@ -278,7 +284,11 @@ ISR(USI_START_VECTOR)
  * for new Start Condition.
  */
 ISR(USI_OVERFLOW_VECTOR)
+//void i2c_Process_Overflow_intr (void)
 {
+    /*if ((USISR & _BV(USIOIF)) == 0)
+        return;*/
+
     switch (sDrvState)
     {
         // ---------- Address mode ----------
@@ -287,13 +297,11 @@ ISR(USI_OVERFLOW_VECTOR)
             if (/*(USIDR == 0) ||*/ ((USIDR>>1) == sSlaveAddress))
             {
                 LON
+                // either write to slave's registers or ...
+                sDrvState = USI_SLAVE_START_DATA_RX;
                 if ( USIDR & 0x01 )
                 {   // read from slave registers
                     sDrvState = USI_SLAVE_SEND_DATA;
-                }
-                else
-                {   // write to slave's registers
-                    sDrvState = USI_SLAVE_START_DATA_RX;
                 }
                 SET_USI_TO_SEND_ACK();
             }
@@ -311,7 +319,7 @@ ISR(USI_OVERFLOW_VECTOR)
             {
                 SET_USI_TO_TWI_START_CONDITION_MODE();
                 LOFF
-                return;
+                break;
             }
             // From here we just drop straight into USI_SLAVE_SEND_DATA if the master sent an ACK
 
@@ -367,4 +375,7 @@ ISR(USI_OVERFLOW_VECTOR)
             }
             break;
     }
+
+    // Clear interrupt flag
+    //USISR |= _BV(USIOIF);
 }
