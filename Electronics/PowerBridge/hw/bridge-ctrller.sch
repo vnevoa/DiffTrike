@@ -1,5 +1,5 @@
-EESchema Schematic File Version 2  date 18.7.2014 22:42:12
-LIBS:ed,conn,linear,contrib
+EESchema Schematic File Version 2  date 22.8.2014 9:11:08
+LIBS:ed,conn,linear,contrib,.\bridge-ctrller.cache
 EELAYER 24  0
 EELAYER END
 $Descr A4 11700 8267
@@ -213,10 +213,10 @@ $EndComp
 Text Label 2600 3750 2    39   ~ 0
 +5V
 $Comp
-L GND #PWR05
+L GND #PWR01
 U 1 1 4D5DC3DA
 P 3100 3850
-F 0 "#PWR05" H 3100 3850 30  0001 C CNN
+F 0 "#PWR01" H 3100 3850 30  0001 C CNN
 F 1 "GND" H 3100 3780 30  0001 C CNN
 	1    3100 3850
 	1    0    0    -1  
@@ -237,10 +237,10 @@ Motor Power Input, 9V to 30V
 Text Label 2000 2950 0    39   ~ 0
 Vcc
 $Comp
-L GND #PWR012
+L GND #PWR02
 U 1 1 4C5606BB
 P 1900 3250
-F 0 "#PWR012" H 1900 3250 30  0001 C CNN
+F 0 "#PWR02" H 1900 3250 30  0001 C CNN
 F 1 "GND" H 1900 3180 30  0001 C CNN
 	1    1900 3250
 	1    0    0    -1  
@@ -256,7 +256,7 @@ F 5 "ED" H 1600 3050 60  0001 C CNN "Supplier"
 	1    1600 3050
 	-1   0    0    1   
 $EndComp
-Text Label 6850 3550 0    39   ~ 0
+Text Label 6850 3750 0    39   ~ 0
 Isens
 Text Notes 6850 2950 0    28   ~ 0
 I2C addr selector (2 possible addrs)
@@ -294,19 +294,19 @@ Text Label 8050 5050 0    39   ~ 0
 Text Label 6950 5050 0    39   ~ 0
 +5V
 $Comp
-L GND #PWR06
+L GND #PWR03
 U 1 1 4C60AAA9
 P 8050 5450
-F 0 "#PWR06" H 8050 5450 30  0001 C CNN
+F 0 "#PWR03" H 8050 5450 30  0001 C CNN
 F 1 "GND" H 8050 5380 30  0001 C CNN
 	1    8050 5450
 	1    0    0    -1  
 $EndComp
 $Comp
-L GND #PWR07
+L GND #PWR04
 U 1 1 4C60AA9E
 P 6950 5450
-F 0 "#PWR07" H 6950 5450 30  0001 C CNN
+F 0 "#PWR04" H 6950 5450 30  0001 C CNN
 F 1 "GND" H 6950 5380 30  0001 C CNN
 	1    6950 5450
 	1    0    0    -1  
@@ -361,10 +361,10 @@ Text Label 5450 5400 2    39   ~ 0
 Text Label 5200 3850 0    39   ~ 0
 /RESET
 $Comp
-L GND #PWR09
+L GND #PWR05
 U 1 1 4C572B3F
 P 5250 5600
-F 0 "#PWR09" H 5250 5600 30  0001 C CNN
+F 0 "#PWR05" H 5250 5600 30  0001 C CNN
 F 1 "GND" H 5250 5530 30  0001 C CNN
 	1    5250 5600
 	1    0    0    -1  
@@ -413,10 +413,10 @@ SDA
 Text Label 2000 3950 0    39   ~ 0
 +5V
 $Comp
-L GND #PWR011
+L GND #PWR06
 U 1 1 4C5606C2
 P 1900 4150
-F 0 "#PWR011" H 1900 4150 30  0001 C CNN
+F 0 "#PWR06" H 1900 4150 30  0001 C CNN
 F 1 "GND" H 1900 4080 30  0001 C CNN
 	1    1900 4150
 	1    0    0    -1  
@@ -424,10 +424,10 @@ $EndComp
 Text Label 7850 3300 0    28   ~ 0
 Vcc
 $Comp
-L GND #PWR013
+L GND #PWR07
 U 1 1 4C5604FD
 P 7850 4000
-F 0 "#PWR013" H 7850 4000 30  0001 C CNN
+F 0 "#PWR07" H 7850 4000 30  0001 C CNN
 F 1 "GND" H 7850 3930 30  0001 C CNN
 	1    7850 4000
 	1    0    0    -1  
@@ -459,10 +459,10 @@ microcontroller decoupling cap
 Text Label 6100 2200 2    39   ~ 0
 +5V
 $Comp
-L GND #PWR014
+L GND #PWR08
 U 1 1 4C560485
 P 6600 2300
-F 0 "#PWR014" H 6600 2300 30  0001 C CNN
+F 0 "#PWR08" H 6600 2300 30  0001 C CNN
 F 1 "GND" H 6600 2230 30  0001 C CNN
 	1    6600 2300
 	1    0    0    -1  
@@ -497,19 +497,19 @@ Text Label 5450 3350 2    39   ~ 0
 Text Label 6850 3450 0    39   ~ 0
 +5V
 $Comp
-L GND #PWR015
+L GND #PWR09
 U 1 1 4C560377
 P 7400 3450
-F 0 "#PWR015" H 7400 3450 30  0001 C CNN
+F 0 "#PWR09" H 7400 3450 30  0001 C CNN
 F 1 "GND" H 7400 3380 30  0001 C CNN
 	1    7400 3450
 	1    0    0    -1  
 $EndComp
 $Comp
-L GND #PWR016
+L GND #PWR010
 U 1 1 4C56036D
 P 5050 3450
-F 0 "#PWR016" H 5050 3450 30  0001 C CNN
+F 0 "#PWR010" H 5050 3450 30  0001 C CNN
 F 1 "GND" H 5050 3380 30  0001 C CNN
 	1    5050 3450
 	0    1    1    0   
@@ -527,10 +527,10 @@ HB1_L
 Text Label 5450 3550 2    39   ~ 0
 HB1_H
 $Comp
-L GND #PWR017
+L GND #PWR011
 U 1 1 4C55FB7E
 P 7450 4300
-F 0 "#PWR017" H 7450 4300 30  0001 C CNN
+F 0 "#PWR011" H 7450 4300 30  0001 C CNN
 F 1 "GND" H 7450 4230 30  0001 C CNN
 	1    7450 4300
 	1    0    0    -1  
@@ -559,7 +559,7 @@ F 5 "ED" H 7200 3850 60  0001 C CNN "Supplier"
 $EndComp
 Text Label 6850 3650 0    39   ~ 0
 VccSens
-Text Label 6850 3750 0    39   ~ 0
+Text Label 6850 3550 0    39   ~ 0
 OCA
 $Comp
 L ATTINY26 U1

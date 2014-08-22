@@ -1,4 +1,4 @@
-EESchema Schematic File Version 2  date 20.8.2014 22:05:04
+EESchema Schematic File Version 2  date 22.8.2014 19:55:15
 LIBS:ed,device,conn,linear,.\bridge-power.cache
 EELAYER 24  0
 EELAYER END
@@ -1066,7 +1066,7 @@ L RX R14
 U 1 1 4C576D9E
 P 4650 6600
 F 0 "R14" H 4650 6645 43  0000 C BNN
-F 1 "2K2" H 4650 6530 43  0000 C CNN
+F 1 "680" H 4650 6530 43  0000 C CNN
 F 4 "0,01" H 4650 6600 60  0001 C CNN "Cost"
 F 5 "ED" H 4650 6600 60  0001 C CNN "Supplier"
 	1    4650 6600
