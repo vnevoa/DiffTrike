@@ -29,15 +29,40 @@
 #include "i2c_slave.h"
 
 
+/// ---- Compilation flags BEGIN ------------
+
+// Use this to control what to compile to run in the AVR simulator. Currently
+// it disables some non-critical delays.
 //#define SIMULATOR
+
+// The output stage double pulse test mode.
+//#define ENABLE_DOUBLE_PULSE
+
+// Code to write the params to EEPROM is not always needed so we remove it for space.
 #define DISABLE_EEPROM_WRITE
-//#define DISABLE_TIMER_TICK
+
+// Some compile modes need more code space, which can be obtained by dropping
+// things like the ADC code.
 //#define DISABLE_ADC
-//#define DISABLE_PWM
+
+// Enable the tick if you need to use sleep for "pause until next interrupt".
+#define DISABLE_TIMER_TICK
+
+// Control of the OverCurrentAlarm code. Disabling it disables current
+// limiting, which may toast the controller if abused.
+//#define DISABLE_OCA
+
+// Auto config for double pulse test mode.
+#ifdef ENABLE_DOUBLE_PULSE
+#   define DISABLE_ADC
+#   define DISABLE_EEPROM_WRITE
+#endif
+
+/// ---- Compilation flags END --------------
 
 
-// This value can be read from an I2C register
-#define FW_VERSION  0x16        // 0 x <major> <minor>
+// This value can be read from one of the I2C registers
+#define FW_VERSION  0x17        // 0 x <major> <minor>
 
 #define ON      1
 #define OFF     0
@@ -46,14 +71,6 @@
 
 #define word    uint16_t
 #define bool    byte
-
-
-/*/ AVR ADC internal Vref - chip dependant
-#ifdef WHITEDOTCHIP
-#   define VREFx10  27     // white dot chip 2.73V
-#else
-#   define VREFx10  28     // no white dot chip
-#endif*/
 
 #define MIN_MOTOR_VCC           22  // V
 #define MAX_CURRENT             20  // A
@@ -72,6 +89,7 @@
 #define PortToggle(port_letter, bits)   PORT ## port_letter ^= (bits)
 
 
+// AVR pin assigned functions
 enum {
     eI2CaddrSel     = _BV(PA0),
     eBridgeTemp     = _BV(PA1),
@@ -125,14 +143,9 @@ enum {
     eCmd_SetVref,
     eCmd_GetVref,
     // Debug commands
+    eCmd_DoDoublePulseTest,
     eCmd_GetPinA,
     eCmd_GetPinB,
-    eCmd_GetAdc0,
-    eCmd_GetAdc1,
-    eCmd_GetAdc2,
-    eCmd_GetAdc3,
-    eCmd_GetAdc4,
-    eCmd_GetAdc5,
     eCmd_SetPwmFreq8KHz,
     eCmd_SetPwmFreq15KHz,
     eCmd_SetPwmPres = 0xF0,
@@ -148,6 +161,7 @@ typedef struct {
 
 // Configuration parameters.
 static TEECfg  gCfg;
+
 
 static byte  gCurrSpeed = 0;
 static byte  gCurrAcc = 0;
@@ -170,19 +184,14 @@ static void delayMs (unsigned short ms)
 }
 
 
-static void clear_timer_flags (void)
-{
-    TIFR |= _BV(TOV1);
-    TIFR |= _BV(OCF1A) | _BV(OCF1B);
-}
-
-
 static inline void OCAInterrupt (bool on)
 {
+#  ifndef DISABLE_OCA
     if (on)
         GIMSK |= _BV(PCIE1);
     else
         GIMSK &= ~_BV(PCIE1);
+#  endif
 }
 
 
@@ -264,6 +273,14 @@ static inline byte isFwd (void)
 }
 
 
+static void BkwOff (void)
+{
+    BotHB2(OFF);
+    _delay_us(1.5);
+    TopHB2(PFWMODE);
+}
+
+
 static void FwOff (void)
 {
     BotHB1(OFF);
@@ -272,11 +289,10 @@ static void FwOff (void)
 }
 
 
-static void BkwOff (void)
+static void clear_timer_flags (void)
 {
-    BotHB2(OFF);
-    _delay_us(1.5);
-    TopHB2(PFWMODE);
+    TIFR |= _BV(TOV1);
+    TIFR |= _BV(OCF1A) | _BV(OCF1B);
 }
 
 
@@ -328,11 +344,13 @@ static inline void GoBw (byte val)
 
 ISR (TIMER1_OVF1_vect)
 {
-    // Don't turn ON OCA still active.
+#  ifndef DISABLE_OCA
+    // Don't turn ON while OCA is active.
     if ((PINA & eOCA) == 0)
     {
         return;
     }
+#  endif
 
     if (isFwd())
     {
@@ -355,6 +373,8 @@ ISR (TIMER1_OVF1_vect)
         BotHB2(ON);
     }
 
+    // We can clear the current limiting status flag, as here we know
+    // we're not limiting.
     i2c_Set_Reg(eI2cReg_Status, i2c_Get_Reg(eI2cReg_Status) & (~eStatus_Overcurrent_Limiter));
 }
 
@@ -371,6 +391,7 @@ ISR (TIMER1_CMPB_vect)
 }
 
 
+#ifndef DISABLE_OCA
 ISR(IO_PINS_vect)
 {
     // We'll get also interrupts due to other pins. Filter the state we're
@@ -390,6 +411,7 @@ ISR(IO_PINS_vect)
         i2c_Set_Reg(eI2cReg_Status, i2c_Get_Reg(eI2cReg_Status) | eStatus_Overcurrent_Limiter);
     }
 }
+#endif
 
 
 #ifndef DISABLE_TIMER_TICK
@@ -425,7 +447,7 @@ static void start_timer_0 (void)
  */
 static void adc_init (void)
 {
-# ifndef DISABLE_ADC
+#  ifndef DISABLE_ADC
     // Select 1st channel to sample.
     ADMUX |= 1;
 
@@ -456,7 +478,7 @@ static void adc_init (void)
 
     // Start a conversion to trigger conversion chain.
     //ADCSR |= _BV(ADSC);
-# endif
+#  endif
 }
 
 
@@ -501,25 +523,23 @@ static void ports_init (void)
 
 static void pwm_init (void)
 {
-#   ifndef DISABLE_PWM
     // Counter only works as a counter.
     TCCR1A = 0;
     // Overflow happens at (sysclock / prescaler / (OCRC + 1))
     // Prescaler: 1: /1, 2: /2, 3: /4, 4: /8
-#   if F_CPU==4000000
-    // Ctr overflow freq: 4MHz / 1 / (255 + 1) = 15.625KHz
-    //                    4MHz / 2 / (255 + 1) =  7.813KHz
-    //                    4MHz / 2 / (249 + 1) =  8.000KHz
+#  if F_CPU==4000000
+    // Ctr overflow freq: 4MHz / 1 / (255 + 1) = 15.625KHz  (1)
+    //                    4MHz / 2 / (255 + 1) =  7.813KHz  (2)
+    //                    4MHz / 2 / (249 + 1) =  8.000KHz  (2)
     TCCR1B = (TCCR1B & 0xF0) | 2;
-#   elif F_CPU==8000000
-    // Ctr overflow freq: 8MHz / 2 / (255 + 1) = 15.625KHz
-    //                    8MHz / 4 / (255 + 1) =  7.813KHz
-    //                    8MHz / 4 / (249 + 1) =  8.000KHz
-    //                    8MHz / 4 / (199 + 1) = 10.000KHz
+#  elif F_CPU==8000000
+    // Ctr overflow freq: 8MHz / 2 / (255 + 1) = 15.625KHz  (2)
+    //                    8MHz / 4 / (255 + 1) =  7.813KHz  (3)
+    //                    8MHz / 4 / (249 + 1) =  8.000KHz  (3)
+    //                    8MHz / 4 / (199 + 1) = 10.000KHz  (3)
     TCCR1B = (TCCR1B & 0xF0) | 3;
-#   endif
+#  endif
     OCR1C = 0xFF;
-#   endif
 }
 
 
@@ -528,12 +548,6 @@ byte volatile gI2C_RegFile[I2C_REGISTER_FILE_SIZE];
 
 static void twi_init (void)
 {
-/*#ifdef WHITEDOTCHIP
-    byte  my_i2c_addr = 0x23;
-#else
-    byte  my_i2c_addr = 0x22;   //PortRead(A, eI2CaddrSel)? 0x22 : 0x23;        // autoset addr not working, I think is'cause I forgot to set the hw jumper
-#endif
-*/
     i2c_Set_Reg(eI2cReg_SwRevision, FW_VERSION);
 
     i2c_Set_Reg_Access(eI2cReg_Command, eI2c_RW);
@@ -545,6 +559,7 @@ static void twi_init (void)
 
 
 
+#ifndef DISABLE_ADC
 // This is not good at all and needs further work, but is what I can do now.
 static inline void ReadMotorCurrent (void)
 {
@@ -644,6 +659,7 @@ static word ReadAdc (uint8_t chn)
     SREG = prevSREG;
     return val;
 }
+#endif
 
 
 static byte CalcChecksum (void* ptr, byte size)
@@ -660,7 +676,7 @@ static byte CalcChecksum (void* ptr, byte size)
 
 // EEPROM start addr of the config
 #define EepromCfgAddr   3
-// 1st byte of the config must be this magic number
+// 1st byte of the config must be this magic number :)
 #define EEPROM_MAGIC_NUMBER  0x69
 
 
@@ -726,20 +742,29 @@ int __attribute__((noreturn)) main(void)
     set_sleep_mode(SLEEP_MODE_IDLE);
 
     // Initial short LED blink, or long if using the default config.
+#  ifdef SIMULATOR
     for (i = i? 2 : 8; i; i--)
     {
         PortToggle(A, eLED);
         delayMs(250);
     }
+#  endif
 
-#   ifdef SIMULATOR
+#  ifdef SIMULATOR
     i = MIN_PWM;
     i2c_Set_Reg(eI2cReg_Speed, i);
     GoFw(i);
-#   endif
+#  endif
 
     // Sleep mode always ON
     MCUCR |= _BV(SE);
+
+#  ifdef ENABLE_DOUBLE_PULSE
+    // More user friendly start values
+    i2c_Set_Reg(eI2cReg_Command, eCmd_DoDoublePulseTest);   // DP test cmd nr.
+    i2c_Set_Reg(eI2cReg_Speed, 50);                         // 1st pulse len (us)
+    i2c_Set_Reg(eI2cReg_Acceleration, 10);                  // pause len (us)
+#  endif
 
     // Enable interrupts
     sei();
@@ -779,7 +804,7 @@ int __attribute__((noreturn)) main(void)
                         cmdVal = 69;  // confirmation value
                         break;
 
-#                   ifndef DISABLE_EEPROM_WRITE
+#                  ifndef DISABLE_EEPROM_WRITE
                     case eCmd_SetI2cAddr :
                         if (gCurrAcc >= 0x20 && gCurrAcc <= 0x28)
                         {
@@ -797,13 +822,70 @@ int __attribute__((noreturn)) main(void)
                             cmdVal = gCurrAcc;  // confirmation value
                         }
                         break;
-#                   endif
+#                  endif
 
                     case eCmd_GetVref :
                         cmdVal = gCfg.adcVrefx10;
                         break;
 
                     // Debug Commands //
+
+#                  ifdef ENABLE_DOUBLE_PULSE
+                    case eCmd_DoDoublePulseTest :
+                    {
+                        byte  ctr;
+                        gCurrAcc = 0;       // prevent compiler warning
+
+                        // Lenght of 1st pulse in the SPEED reg, length of
+                        // pause in the ACC reg, 2nd pulse len is fixed at 25us.
+                        // All times in us.
+                        
+                        if (i2c_Get_Reg(eI2cReg_Speed) < 2)
+                            i2c_Set_Reg(eI2cReg_Speed, 2);
+                        cli();
+
+                        AllOff();
+                        _delay_us(100);
+                        TopHB2(ON);
+
+                        // Pulse #1
+                        BotHB1(ON);
+                        // -2 compensates for some delays and code
+                        for (ctr = i2c_Get_Reg(eI2cReg_Speed) - 2; ctr; ctr--)
+                        {
+                            asm volatile("nop");
+                            asm volatile("nop");
+                            asm volatile("nop");
+                            asm volatile("nop");
+                            asm volatile("nop");
+                        }
+                        FwOff();
+
+                        // pause...
+                        for (ctr = i2c_Get_Reg(eI2cReg_Acceleration) - 2; ctr; ctr--)
+                        {
+                            asm volatile("nop");
+                            asm volatile("nop");
+                            asm volatile("nop");
+                            asm volatile("nop");
+                            asm volatile("nop");
+                        }
+
+                        // Pulse #2, fixed len
+                        TopHB1(OFF);
+                        _delay_us(2);
+                        BotHB1(ON);
+                        _delay_us(20);
+                        FwOff();
+
+                        _delay_us(500);
+                        AllOff();
+
+                        sei();
+                        cmdVal = cmd;       // ready to repeat test
+                        break;
+                    }
+#                  endif
 
                     /*case eCmd_SetPwmFreq8KHz :
                         pwm_SetFrequency(8000);
@@ -837,6 +919,8 @@ int __attribute__((noreturn)) main(void)
 
                 i2c_Set_Reg(eI2cReg_Command, cmdVal);
             }
+
+#          ifndef ENABLE_DOUBLE_PULSE
             byte  update = 0;
             if (chg_mask & _BV(eI2cReg_Speed))          // Speed register
             {
@@ -877,10 +961,12 @@ int __attribute__((noreturn)) main(void)
                 // current.
                 delayMs(10);
             }
+#          endif
         }
 
         // ADC readings.
 
+#      ifndef DISABLE_ADC
         ReadMotorCurrent();
 
         // After reading motor current, we read the remaining inputs, one
@@ -905,5 +991,6 @@ int __attribute__((noreturn)) main(void)
                 i2c_Set_Reg(eI2cReg_Status, i2c_Get_Reg(eI2cReg_Status) & (~eStatus_UnderVcc_Limiter) );
             }
         }
+#      endif
     }
 }
