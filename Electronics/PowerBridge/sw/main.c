@@ -627,6 +627,10 @@ static void twi_init (void)
 
     i2c_Set_Reg_Access(eI2cReg_Command, eI2c_RW);
     i2c_Set_Reg_Access(eI2cReg_Speed, eI2c_RW);
+#  ifndef DISABLE_EEPROM_WRITE
+    // (writing to this reg is used as a parameter for some functionality)
+    i2c_Set_Reg_Access(eI2cReg_MotorCurrent, eI2c_RW);
+#  endif
 
     i2c_Slave_Initialise(gCfg.i2cAddr);
 }
@@ -744,8 +748,10 @@ int __attribute__((noreturn)) main(void)
     // Enable interrupts
     sei();
 
+#  ifndef DISABLE_ADC
     word  motor_current_acc = 0;
     byte  num_motor_current_samples = 0;
+#  endif
     byte  heart_beat = 0;
 
     while(1)
@@ -782,22 +788,28 @@ int __attribute__((noreturn)) main(void)
 
 #                  ifndef DISABLE_EEPROM_WRITE
                     case eCmd_SetI2cAddr :
-                        if (gCurrAcc >= 0x20 && gCurrAcc <= 0x28)
+                    {
+                        byte  i2c_addr = i2c_Get_Reg(eI2cReg_MotorCurrent);
+                        if (i2c_addr >= 0x20 && i2c_addr <= 0x28)
                         {
-                            gCfg.i2cAddr = gCurrAcc;
+                            gCfg.i2cAddr = i2c_addr;
                             SaveCfgToEeprom();
-                            cmdVal = gCurrAcc;  // confirmation value
+                            cmdVal = i2c_addr;  // confirmation value
                         }
                         break;
+                    }
 
                     case eCmd_SetVref :
+                    {
+                        byte  vrefx10 = i2c_Get_Reg(eI2cReg_MotorCurrent);
                         //if (gCurrAcc >= 22 && gCurrAcc <= 32)
                         {
-                            gCfg.adcVrefx10 = gCurrAcc;
+                            gCfg.adcVrefx10 = vrefx10;
                             SaveCfgToEeprom();
-                            cmdVal = gCurrAcc;  // confirmation value
+                            cmdVal = vrefx10;  // confirmation value
                         }
                         break;
+                    }
 #                  endif
 
                     case eCmd_GetVref :
@@ -914,6 +926,8 @@ int __attribute__((noreturn)) main(void)
                     gCurrSpeed = 0;
                     i2c_Set_Reg(eI2cReg_MotorCurrent, 0);
                     i2c_Set_Reg(eI2cReg_Status, heart_beat);        // (zero non-hb bits)
+                    // Make sure the ADC readings don't stop, triggering one.
+                    ADCSR |= _BV(ADSC);
                 }
                 else
                 {
