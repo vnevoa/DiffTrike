@@ -485,8 +485,10 @@ ISR(ADC_vect)
         {
             ADMUX = admux | eADC_MotorDriveCurrent;
             gAdc[eADC_VccSens] = val;
-            // Do NOT start next conversion.
-            // It will be started when at the start of the PWM period.
+            // Start next conversion only if the motor is running, otherwise
+            // it has to be started at the beginning of the PWM period.
+            if (!gCurrSpeed)
+                ADCSR |= _BV(ADSC);
             break;
         }
     }
@@ -548,6 +550,9 @@ static void adc_init (void)
 
     // Enable ADC. It will always be enabled.
     ADCSR |= _BV(ADEN);
+
+    // Start the 1st conversion to trigger the ADC reading process.
+    ADCSR |= _BV(ADSC);
 #  endif
 }
 
@@ -940,7 +945,7 @@ int __attribute__((noreturn)) main(void)
             // adc * adcVrefx10 / 1024 = Vcc * 10 / 11
             // Vcc * 10 = adc * adcVrefx10 * 11 / 1024;
             val = (long)val * gCfg.adcVrefx10 * 11 / 1024;
-            // subtract 10V to fit in 8 bits
+            // subtract 10V to fit in 8 bits and set the register
             val = (val < 100? 0 : val - 100);
             i2c_Set_Reg(eI2cReg_HBridgeVcc, (byte)val);
         }
