@@ -30,7 +30,7 @@
 
 
 // This value can be read from one of the I2C registers
-#define FW_VERSION  24
+#define FW_VERSION  25
 
 
 /// ---- Compilation flags BEGIN ------------
@@ -115,11 +115,11 @@ enum {
 // ADC channels
 enum {
     // goes to the add-on to be "split" into 2 sensors, 1 for each heatsink
-    eADC_Temp1Bridge = 1,
+    eADC_Temp1Bridge        = 1,
     // this goes to the power board where there's a doide connection "socket"
-    eADC_Temp2Motor = 2,
-    eADC_VccSens = 4,
-    eADC_MotorDriveCurrent = 5,
+    eADC_Temp2Motor         = 2,
+    eADC_VccSens            = 4,
+    eADC_MotorDriveCurrent  = 5,
 
     eADC_NumOfChannels
 };
@@ -127,26 +127,31 @@ enum {
 
 // The registers we support. Can be read, some written, through I2C:
 enum {
-    eI2cReg_Command         = 0,    // R/W   command
-    eI2cReg_Status          = 1,    //   R   status
-    eI2cReg_Speed           = 2,    // R/W   speed
-    eI2cReg_Acceleration    = 3,    // R/W   acceleration
-    eI2cReg_Temperature     = 4,    //   R   temperature
-    eI2cReg_MotorCurrent    = 5,    //   R   motor current
-    eI2cReg_MotorVcc        = 6,    //   R   motor Vcc
-    eI2cReg_SwRevision      = 7,    //   R   sw revision
+    eI2cReg_Command         = 0,    // RW  command
+    // Status: b0~b3: heartbeat, b4:over-current, b5:over-temperature, b6:busy, b7:?
+    eI2cReg_Status          = 1,    //  R  status
+    // Speed: speed/direction:  b7: direction; b0~6: Speed
+    eI2cReg_Speed           = 2,    // RW  speed
+    // raw diode reading
+    eI2cReg_HBridgeTemp     = 3,    //  W  controller temperature
+    // raw diode reading
+    eI2cReg_MotorTemp       = 4,    //  R  motor temperature
+    // Motor driving current (I), x10 in A
+    //  I = MotorCurrent / 10
+    eI2cReg_MotorCurrent    = 5,    //  R  motor current
+    // Controller's power supply voltage (Vcc), minus 10V x10
+    //  Vcc = HBridgeVcc / 10 + 10
+    eI2cReg_HBridgeVcc      = 6,    //  R  controller Vcc
+    eI2cReg_SwRevision      = 7,    //  R  sw revision
 };
 
 // Status register bit flags
 enum {
-    eStatus_Accelerating            = _BV(0),
-    eStatus_Overcurrent_Limiter     = _BV(1),
-    eStatus_Overtemp_Limiter        = _BV(2),
-    eStatus_UnderVcc_Limiter        = _BV(3),
-
-    eStatus_Limiter_Mask            = eStatus_Overcurrent_Limiter
-                                    | eStatus_Overtemp_Limiter
-                                    | eStatus_UnderVcc_Limiter
+    eStatus_HeartBeat           = _BV(0) | _BV(1) | _BV(2) | _BV(3),
+    eStatus_MotorOverCurrent    = _BV(4),
+    eStatus_OverTemperature     = _BV(5),       // currently not used
+    eStatus_Busy                = _BV(6),       // currently not used
+    eStatus_Reserved            = _BV(7),
 };
 
 // Commands for the Command Register
@@ -176,9 +181,7 @@ typedef struct {
 // Configuration parameters.
 static TEECfg  gCfg;
 
-
 static byte  gCurrSpeed = 0;
-static byte  gCurrAcc = 0;
 
 static volatile word  gAdc[eADC_NumOfChannels];
 
@@ -277,7 +280,7 @@ static void DissipativeBreak (void)
 {
     TopHB1(OFF);
     TopHB2(OFF);
-    _delay_us(1);
+    _delay_us(3);
     BotHB1(ON);
     BotHB2(ON);
 }
@@ -350,7 +353,7 @@ static inline void GoBw (byte val)
         BotHB2(OFF);
 
         // Make TCNT1 overflow soon. It will then start the PWM cycle,
-        // turning the bottom MOSFET ON
+        // turning the bottom MOSFET ON, in the overflow interrupt.
         TCNT1 = 0xf0;
         clear_timer_flags();
     }
@@ -391,7 +394,7 @@ ISR (TIMER1_OVF1_vect)
     // We can clear the current limiting status flag, as here we know
     // we're not limiting.
     // 5 cycles (0.625us @ 8MHz)
-    i2c_Set_Reg(eI2cReg_Status, i2c_Get_Reg(eI2cReg_Status) & (~eStatus_Overcurrent_Limiter));
+    i2c_Set_Reg(eI2cReg_Status, i2c_Get_Reg(eI2cReg_Status) & (~eStatus_MotorOverCurrent));
 
     // Start the ADC to read the (motor driving) current. Result to be processed
     // on the ADC interrupt.
@@ -429,7 +432,7 @@ ISR(IO_PINS_vect)
             BkwOff();
         }
         // Signal OCA. Bit is reset on every PWM period start (if eOCA is inactive).
-        i2c_Set_Reg(eI2cReg_Status, i2c_Get_Reg(eI2cReg_Status) | eStatus_Overcurrent_Limiter);
+        i2c_Set_Reg(eI2cReg_Status, i2c_Get_Reg(eI2cReg_Status) | eStatus_MotorOverCurrent);
     }
 }
 #endif
@@ -445,6 +448,7 @@ ISR(ADC_vect)
 {
     word  val = ADCW;       // must be read with interrupts disabled!
 
+    // This interrupt is slow and low priority, so release the big cpu lock :)
     sei();
 
     byte  admux = ADMUX;
@@ -618,13 +622,9 @@ static void twi_init (void)
 
     i2c_Set_Reg_Access(eI2cReg_Command, eI2c_RW);
     i2c_Set_Reg_Access(eI2cReg_Speed, eI2c_RW);
-    i2c_Set_Reg_Access(eI2cReg_Acceleration, eI2c_RW);
 
     i2c_Slave_Initialise(gCfg.i2cAddr);
 }
-
-
-
 
 
 static byte CalcChecksum (void* ptr, byte size)
@@ -648,6 +648,7 @@ static byte CalcChecksum (void* ptr, byte size)
 static void SaveCfgToEeprom (void)
 {
 #  ifndef DISABLE_EEPROM_WRITE
+    byte  prevSREG = SREG;
     cli();
     eeprom_busy_wait();
     eeprom_write_byte((byte*)EepromCfgAddr, EEPROM_MAGIC_NUMBER);
@@ -656,7 +657,7 @@ static void SaveCfgToEeprom (void)
     eeprom_busy_wait();
     eeprom_write_byte((byte*)(EepromCfgAddr + 1 + sizeof(gCfg)),
                       CalcChecksum(&gCfg, sizeof(gCfg)));
-    sei();
+    SREG = prevSREG;
 #  endif
 }
 
@@ -738,12 +739,19 @@ int __attribute__((noreturn)) main(void)
     // Enable interrupts
     sei();
 
-    word  acc = 0;
-    byte  num = 0;
+    word  motor_current_acc = 0;
+    byte  num_motor_current_samples = 0;
+    byte  heart_beat = 0;
 
     while(1)
     {
         //sleep();
+
+        heart_beat = (heart_beat + 1) & eStatus_HeartBeat;
+        byte  prevSREG = SREG;
+        cli();
+        i2c_Set_Reg(eI2cReg_Status, (i2c_Get_Reg(eI2cReg_Status) & ~(eStatus_HeartBeat)) | heart_beat);
+        SREG = prevSREG;
 
         // Handle I2C commands
         byte  chg_mask = i2c_Get_Changed_Mask();
@@ -884,41 +892,40 @@ int __attribute__((noreturn)) main(void)
             }
 
 #          ifndef ENABLE_DOUBLE_PULSE
-            byte  update = 0;
             if (chg_mask & _BV(eI2cReg_Speed))          // Speed register
             {
-                update = 1;
-            }
-            if (chg_mask & _BV(eI2cReg_Acceleration))   // Acceleration register
-            {
-                update = 1;
-            }
-            if (update)
-            {
+                byte  speed = i2c_Get_Reg(eI2cReg_Speed);
+                // Bit 7 is direction, remaining bits are half speed.
+                byte  dir = speed & 0x80;
+                speed <<= 1;
+
+                byte  prevSREG = SREG;
                 cli();
-                gCurrAcc = i2c_Get_Reg(eI2cReg_Acceleration);
-                byte  val = i2c_Get_Reg(eI2cReg_Speed);
-                if (val == 0)
+
+                if (speed == 0)
                 {
                     OCAInterrupt(OFF);
                     AllOff();
+                    gCurrSpeed = 0;
                     i2c_Set_Reg(eI2cReg_MotorCurrent, 0);
-                    i2c_Set_Reg(eI2cReg_Status, 0);
+                    i2c_Set_Reg(eI2cReg_Status, heart_beat);        // (zero non-hb bits)
                 }
                 else
                 {
-                    OCAInterrupt(ON);
-                    if (val < MIN_PWM)
-                        val = MIN_PWM;
-                    else if (val > 255-MIN_PWM)
-                        val = 255 - MIN_PWM;
+                    // Speed has a limited range in both ends.
+                    if (speed < MIN_PWM)
+                        speed = MIN_PWM;
+                    if (speed > 255 - MIN_PWM)
+                        speed = 255 - MIN_PWM;
 
-                    if (gCurrAcc == 0)
-                        GoFw(val);
+                    if (dir == 0)
+                        GoFw(speed);
                     else
-                        GoBw(val);
+                        GoBw(speed);
+
+                    OCAInterrupt(ON);
                 }
-                sei();
+                SREG = prevSREG;
             }
 #          endif
         }
@@ -929,29 +936,32 @@ int __attribute__((noreturn)) main(void)
         // Process power supply voltage.
         {
             word  val = gAdc[eADC_VccSens];
-            // Vadc = Vcc * 1K / 11K
+            // Vadc = Vcc * 1K / (10K + 1K)
             // adc * adcVrefx10 / 1024 = Vcc * 10 / 11
             // Vcc * 10 = adc * adcVrefx10 * 11 / 1024;
             val = (long)val * gCfg.adcVrefx10 * 11 / 1024;
-            val = (val < 100? 0 : val - 100);       // subtract 10V otherwise won't fit 8 bits
-            i2c_Set_Reg(eI2cReg_MotorVcc, (byte)val);
+            // subtract 10V to fit in 8 bits
+            val = (val < 100? 0 : val - 100);
+            i2c_Set_Reg(eI2cReg_HBridgeVcc, (byte)val);
         }
-        // Process motor current readings. Average 8 samples.
-        if (i2c_Get_Reg(eI2cReg_Speed) && gAdc[eADC_MotorDriveCurrent])
+        // Process motor current readings. Average N samples.
+        if (gCurrSpeed && gAdc[eADC_MotorDriveCurrent])
         {
             word  val = gAdc[eADC_MotorDriveCurrent];
             // 5mOhm current sense resistor -> 5 mV/A
             val = gCfg.adcVrefx10 * val;    // no overflow; val ~ Vadc * 1000
             val = (val + 2) / 5;            // Motor current, in A x 10
             byte  final = (byte)val;
-            acc += final;
-            num++;
-            if (num >= 8)
+            motor_current_acc += final;
+            num_motor_current_samples++;
+            if (num_motor_current_samples >= 8)
             {
-                final = (byte) ((acc + 2) / 8);
+                final = (byte) ((motor_current_acc + 2) / 8);
+                if (final > 10)
+                    final -= 10;
                 i2c_Set_Reg(eI2cReg_MotorCurrent, final);
-                acc = 0;
-                num = 0;
+                motor_current_acc = 0;
+                num_motor_current_samples = 0;
             }
         }
         // Process temperature 1, "bridge temp".
@@ -962,7 +972,7 @@ int __attribute__((noreturn)) main(void)
             // So we report 8bits from a base of 0.2V. 0.2V is ~ count 76.
             if (val < 76)
                 val = 76;
-            i2c_Set_Reg(eI2cReg_Temperature, (byte)((val - 76) & 0x00FF));     //@@TODO: make a register for the reading
+            i2c_Set_Reg(eI2cReg_HBridgeTemp, (byte)((val - 76) & 0x00FF));
         }
         // Process temperature 2, "motor temp".
         {
@@ -972,7 +982,7 @@ int __attribute__((noreturn)) main(void)
             // So we report 8bits from a base of 0.4V. 0.4V is ~ count 152.
             if (val < 152)
                 val = 152;
-            i2c_Set_Reg(eI2cReg_Temperature, (byte)((val - 152) & 0x00FF));
+            i2c_Set_Reg(eI2cReg_MotorTemp, (byte)((val - 152) & 0x00FF));
         }
 #      endif
     }
