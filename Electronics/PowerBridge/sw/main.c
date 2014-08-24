@@ -627,7 +627,7 @@ static void twi_init (void)
 
     i2c_Set_Reg_Access(eI2cReg_Command, eI2c_RW);
     i2c_Set_Reg_Access(eI2cReg_Speed, eI2c_RW);
-#  ifndef DISABLE_EEPROM_WRITE
+#  if !defined(DISABLE_EEPROM_WRITE)||defined(ENABLE_DOUBLE_PULSE)
     // (writing to this reg is used as a parameter for some functionality)
     i2c_Set_Reg_Access(eI2cReg_MotorCurrent, eI2c_RW);
 #  endif
@@ -742,7 +742,7 @@ int __attribute__((noreturn)) main(void)
     // More user friendly start values
     i2c_Set_Reg(eI2cReg_Command, eCmd_DoDoublePulseTest);   // DP test cmd nr.
     i2c_Set_Reg(eI2cReg_Speed, 50);                         // 1st pulse len (us)
-    i2c_Set_Reg(eI2cReg_Acceleration, 10);                  // pause len (us)
+    i2c_Set_Reg(eI2cReg_MotorCurrent, 10);                  // pause len (us)
 #  endif
 
     // Enable interrupts
@@ -822,10 +822,9 @@ int __attribute__((noreturn)) main(void)
                     case eCmd_DoDoublePulseTest :
                     {
                         byte  ctr;
-                        gCurrAcc = 0;       // prevent compiler warning
 
-                        // Lenght of 1st pulse in the SPEED reg, length of
-                        // pause in the ACC reg, 2nd pulse len is fixed at 25us.
+                        // Length of 1st pulse in the SPEED reg, length of pause
+                        // in MotorCurrent reg, 2nd pulse len is fixed at 25us.
                         // All times in us.
                         
                         if (i2c_Get_Reg(eI2cReg_Speed) < 2)
@@ -850,7 +849,7 @@ int __attribute__((noreturn)) main(void)
                         FwOff();
 
                         // pause...
-                        for (ctr = i2c_Get_Reg(eI2cReg_Acceleration) - 2; ctr; ctr--)
+                        for (ctr = i2c_Get_Reg(eI2cReg_MotorCurrent) - 2; ctr; ctr--)
                         {
                             asm volatile("nop");
                             asm volatile("nop");

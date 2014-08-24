@@ -1,4 +1,4 @@
-EESchema Schematic File Version 2  date 22.8.2014 19:55:15
+EESchema Schematic File Version 2  date 24.8.2014 0:26:42
 LIBS:ed,device,conn,linear,.\bridge-power.cache
 EELAYER 24  0
 EELAYER END
@@ -1055,7 +1055,7 @@ L CX C6
 U 1 1 4C576DC6
 P 4400 6800
 F 0 "C6" H 4450 6880 39  0000 L CNN
-F 1 "100n" H 4450 6720 39  0000 L CNN
+F 1 "10n" H 4450 6720 39  0000 L CNN
 F 4 "0,12" H 4400 6800 60  0001 C CNN "Cost"
 F 5 "ED" H 4400 6800 60  0001 C CNN "Supplier"
 	1    4400 6800
