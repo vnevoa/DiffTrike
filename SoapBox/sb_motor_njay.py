@@ -118,7 +118,8 @@ class I2CMotorBridge():
 				self.blockings += 1
 
 			# PRINT cycle:
-			if self.debug:
+			if False:
+			#if self.debug:
 				t1 = time.time()
 				if ((t1 - t0) * 1000) > 1000:
 					t0 = t1
@@ -225,26 +226,26 @@ class I2CMotorBridge():
 
 if __name__ == '__main__':
 
-	m1 = I2CMotorBridge('LEFT', '/dev/i2c-1', 0x22, True)
-	m1ok = m1.ongoing
-	m2 = I2CMotorBridge('RIGHT', '/dev/i2c-1', 0x23, True)
-	m2ok = m2.ongoing
+        mL = I2CMotorBridge('LEFT', '/dev/i2c-1', 0x22, True)
+        mLok = mL.ongoing
+        mR = I2CMotorBridge('RIGHT', '/dev/i2c-1', 0x23, True)
+        mRok = mR.ongoing
 
-	pmin = -int(MAX_PWM)
-	pmax = int(MAX_PWM)
+        pmin = -int(MAX_PWM/2)
+        pmax = int(MAX_PWM/2)
 
-	while m1ok or m2ok:
+        while mLok or mRok:
 
-		for i in range(0, pmax+1) + range(pmin, 1):
-			#print "Setting power = %d%%" % (100 * i/MAX_PWM)
-			if m1ok: m1.setPower(i/MAX_PWM)
-			if m2ok: m2.setPower(i/MAX_PWM)
-			time.sleep(0.10)
-			if i == MAX_PWM : time.sleep(5)
-		print ""
-		if m1ok: print "temp1=%0.2f C, curr1=%0.1f A" % (m1.getTemperature(), m1.getCurrent())
-		if m2ok: print "temp2=%0.2f C, curr2=%0.1f A" % (m2.getTemperature(), m2.getCurrent())
-		print ""
+                for i in range(0, pmax+1) + range(pmin, 1):
+                        #print "Setting power = %d%%" % (100 * i/MAX_PWM)
+                        if mLok: mL.setPower(i/MAX_PWM)
+                        if mRok: mR.setPower(i/MAX_PWM)
+                        if mLok: print "LEFT  P %3d%%, B.T %3d, M.T %3d, I %2.1f A, U %2.1f V" % (mL.power*100, mL.getTemperature(), mL.getMotorTemperature(), mL.getCurrent(), mL.getVoltage())
+                        if mRok: print "RIGHT P %3d%%, B.T %3d, M.T %3d, I %2.1f A, U %2.1f V" % (mR.power*100, mR.getTemperature(), mR.getMotorTemperature(), mR.getCurrent(), mR.getVoltage())
+                        time.sleep(0.1)
+                        if i == MAX_PWM : time.sleep(4.5)
+                print ""
+                print ""
 
 	if not m1ok and not m2ok:
 		print "no motors found."
