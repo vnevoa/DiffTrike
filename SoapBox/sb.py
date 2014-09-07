@@ -25,7 +25,7 @@
 #### module imports ####
 
 import os, sys, signal, time, thread, struct, math
-import sb_input, sb_output, sb_joystick, sb_telemetry, sb_motor_md03
+import sb_input, sb_output, sb_joystick, sb_telemetry, sb_motor_njay
 import pygame
 
 #### global flags
@@ -97,11 +97,11 @@ pygame.init()
 stick = sb_joystick.Joystick(0)
 
 # connect to Left motor power bridge:
-leftM = sb_motor_md03.I2CMotorBridge('LEFT', '/dev/i2c-1', 0x58)
+leftM = sb_motor_njay.I2CMotorBridge('LEFT', '/dev/i2c-1', 0x23)
 leftLed = open('/dev/null','w',0)
 
 # connect to Right motor power bridge:
-rightM = sb_motor_md03.I2CMotorBridge('RIGHT', '/dev/i2c-1', 0x5A)
+rightM = sb_motor_njay.I2CMotorBridge('RIGHT', '/dev/i2c-1', 0x22)
 rightLed = open('/dev/null','w',0)
 
 # initialize telemetry
@@ -196,7 +196,7 @@ while ongoing:
 	# write left motor:
 	o.failed_l = False
 	try:
-		leftM.setTorque(o.l_trq)
+		leftM.setPower(o.l_trq)
 	except:
 		o.failed_l = True
 		#print "Failed l.setTorque(%0.3f)" % (o.l_trq)
@@ -208,7 +208,7 @@ while ongoing:
 	# write right motor:
 	o.failed_r = False
 	try:
-		rightM.setTorque(o.r_trq)
+		rightM.setPower(o.r_trq)
 	except:
 		o.failed_r = True
 		#print "Failed r.setTorque(%0.3f)" % (o.r_trq)
