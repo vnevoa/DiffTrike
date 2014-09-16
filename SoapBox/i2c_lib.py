@@ -49,8 +49,11 @@ class I2CSlave():
 	def seek(self, register):
 		self.file.write(struct.pack('B', register))
 
-	def write(self, register, data):
-		self.file.write(struct.pack('BB', register, data))
+	def write(self, register, byte1, byte2):
+		self.file.write(struct.pack('BBB', register, byte1, byte2))
+
+#	def write(self, register, byte):
+#		self.file.write(struct.pack('BB', register, byte))
 
 	def getId(self):
 		return self.username + ":" + self.name + ":" + hex(self.address)
@@ -59,13 +62,27 @@ class I2CSlave():
 # called directly with "python i2c_lib.py"
 
 if __name__ == '__main__':
-	print "Dumping PMU interrupt masks..."
-	pmu = I2CSlave("PMU", '/dev/i2c-1', 0x73, True) # 0x73 = PCF50633 power management unit!
-	pmu.seek(0x07)
-	irq_masks = struct.unpack('BBBBB', pmu.read(5))
-	print " INT1MASK = 0x%x" % (irq_masks[0])
-	print " INT2MASK = 0x%x" % (irq_masks[1])
-	print " INT3MASK = 0x%x" % (irq_masks[2])
-	print " INT4MASK = 0x%x" % (irq_masks[3])
-	print " INT5MASK = 0x%x" % (irq_masks[4])
-	print ""
+	dev = I2CSlave("DUTx32", '/dev/i2c-1', 0x23, True)
+
+	# positive check: write 0 with correct inverted
+	print "FETs OFF"
+	dev.write(2, 0xff, 0)
+	dev.seek(0)
+	data = struct.unpack('BBBBBBBB', dev.read(8))
+	print "0xFF,0x00:  0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x" % (data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7])
+	time.sleep(3)
+
+	# negative check: write 1 with wrong inverted
+	print "FETs still OFF"
+	dev.write(2, 0xff, 1)
+	dev.seek(0)
+	data = struct.unpack('BBBBBBBB', dev.read(8))
+	print "0xFF,0x01:  0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x" % (data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7])
+	time.sleep(3)
+
+	# positive check: write 1 with good inverted
+	print "FETs now ON"
+	dev.write(2, 0xfe, 1)
+	dev.seek(0)
+	data = struct.unpack('BBBBBBBB', dev.read(8))
+	print "0xFE,0x01:  0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x" % (data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7])

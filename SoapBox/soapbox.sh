@@ -1,7 +1,7 @@
 #! /bin/sh
 set -e
 
-# /etc/init.d/soapbox: start and stop the MyOwnHybrid "SoapBox control" daemon
+# /etc/init.d/soapbox: start and stop the MyOwnHybrid "SoapBox" control daemon
 
 APP=/home/pi/SoapBox/sb.py
 WI=
@@ -11,6 +11,7 @@ ACC1=
 ACC2=
 GPS=
 LCD=/dev/tty0
+LOG=/home/pi/SoapBox/app.log
 
 test -x $APP || exit 0
 
@@ -20,7 +21,7 @@ case "$1" in
 	echo -n "Starting SoapBox control application... "
 	# network interfaces are auto configured and pulled up by 'ifup'.
 	# launch control application:
-	start-stop-daemon -N -10 -S -x $APP | grep -v SDL &
+	start-stop-daemon -N -10 -S -x $APP | grep -v SDL > $LOG &
         echo "done."
 	;;
 
