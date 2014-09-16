@@ -211,6 +211,7 @@ void i2c_Set_Reg_Access (byte idx, byte is_writable)
 #define LON     PORTA |= _BV(PA7);      // LED ON
 #define LOFF    PORTA &= ~_BV(PA7);     // LED OFF
 
+
 /*! \brief Usi start condition ISR
  * Detects the USI_TWI Start Condition and intialises the USI
  * for reception of the "TWI Address" packet.
@@ -286,6 +287,9 @@ ISR(USI_START_VECTOR)
 ISR(USI_OVERFLOW_VECTOR)
 //void i2c_Process_Overflow_intr (void)
 {
+    static byte  write_phase = 0;
+    static byte  write_buffer = 0;
+
     /*if ((USISR & _BV(USIOIF)) == 0)
         return;*/
 
@@ -294,6 +298,7 @@ ISR(USI_OVERFLOW_VECTOR)
         // ---------- Address mode ----------
         // Check address and send ACK (and next USI_SLAVE_SEND_DATA) if OK, else reset USI.
         case USI_SLAVE_CHECK_ADDRESS :
+            write_phase = 0;
             if (/*(USIDR == 0) ||*/ ((USIDR>>1) == sSlaveAddress))
             {
                 LON
@@ -338,7 +343,7 @@ ISR(USI_OVERFLOW_VECTOR)
             SET_USI_TO_READ_ACK();
             break;
 
-        // ----- Read data from master ------
+        // ----- Read data from master (write to our registers) ------
         case USI_SLAVE_START_DATA_RX :
             sDrvState = USI_SLAVE_GET_REG_FILE_INDEX;
             SET_USI_TO_READ_DATA();
@@ -361,21 +366,24 @@ ISR(USI_OVERFLOW_VECTOR)
         case USI_SLAVE_GET_DATA_AND_SEND_ACK :
             LOFF
             sRegIdx &= I2C_REGISTER_FILE_SIZE - 1;
+            write_phase = ~write_phase;
+            if (write_phase)
+            {
+                write_buffer = ~(USIDR);
+            }
+            else
             {
                 byte  reg_mask = _BV(sRegIdx);
-                if (reg_mask & sWritableRegsMask)
+                byte  usi_data = USIDR;
+                if ((reg_mask & sWritableRegsMask) && (write_buffer == usi_data))
                 {
-                    gI2C_RegFile[sRegIdx] = USIDR;
+                    gI2C_RegFile[sRegIdx] = usi_data;
                     sChangedRegMask |= reg_mask;    // flag the register as changed
                 }
                 sRegIdx++;
-
-                sDrvState = USI_SLAVE_REQUEST_DATA;
-                SET_USI_TO_SEND_ACK();
             }
+            sDrvState = USI_SLAVE_REQUEST_DATA;
+            SET_USI_TO_SEND_ACK();
             break;
     }
-
-    // Clear interrupt flag
-    //USISR |= _BV(USIOIF);
 }

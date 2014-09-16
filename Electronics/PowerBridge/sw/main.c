@@ -30,7 +30,7 @@
 
 
 // This value can be read from one of the I2C registers
-#define FW_VERSION  25
+#define FW_VERSION  26
 
 
 /// ---- Compilation flags BEGIN ------------
@@ -194,13 +194,13 @@ static inline void sleep (void)
 }
 
 
-static void delayMs (unsigned short ms)
+/*static void delayMs (unsigned short ms)
 {
 #  ifndef SIMULATOR
     while (ms--)
         _delay_ms(1);
 #  endif
-}
+}*/
 
 
 static inline void OCAInterrupt (bool on)
@@ -697,6 +697,45 @@ static byte ReadCfgFromEeprom (void)
 }
 
 
+static void UpdateSpeed (void)
+{
+    byte  speed = i2c_Get_Reg(eI2cReg_Speed);
+    // Bit 7 is direction, remaining bits are half speed.
+    byte  dir = speed & 0x80;
+    speed <<= 1;
+
+    byte  prevSREG = SREG;
+    cli();
+
+    if (speed == 0)
+    {
+        OCAInterrupt(OFF);
+        AllOff();
+        gCurrSpeed = 0;
+        i2c_Set_Reg(eI2cReg_MotorCurrent, 0);
+        i2c_Set_Reg(eI2cReg_Status, 0);
+        // Make sure the ADC readings don't stop, triggering one.
+        ADCSR |= _BV(ADSC);
+    }
+    else
+    {
+        // Speed has a limited range in both ends.
+        if (speed < MIN_PWM)
+            speed = MIN_PWM;
+        if (speed > 255 - MIN_PWM)
+            speed = 255 - MIN_PWM;
+
+        if (dir == 0)
+            GoFw(speed);
+        else
+            GoBw(speed);
+
+        OCAInterrupt(ON);
+    }
+    SREG = prevSREG;
+}
+
+
 /**
  * \brief Main loop
  */
@@ -707,7 +746,8 @@ int __attribute__((noreturn)) main(void)
     ports_init();
 
     // Load config params from EEPROM
-    byte  i = ReadCfgFromEeprom();
+    //byte  i =
+   (void)ReadCfgFromEeprom();
 
     pwm_init();
     // Init i2c slave interface (do it while interrupts are disabled)
@@ -718,11 +758,11 @@ int __attribute__((noreturn)) main(void)
 
     // Initial short LED blink, or long if using the default config.
 #  ifndef SIMULATOR
-    for (i = i? 2 : 8; i; i--)
+    /*for (i = i? 2 : 8; i; i--)
     {
         PortToggle(A, eLED);
         delayMs(250);
-    }
+    }*/
 #  endif
 
 #  ifdef SIMULATOR
@@ -752,18 +792,11 @@ int __attribute__((noreturn)) main(void)
     word  motor_current_acc = 0;
     byte  num_motor_current_samples = 0;
 #  endif
-    byte  heart_beat = 0;
+    //byte  heart_beat = 0;
+    byte  security_ctr = 0;
 
     while(1)
     {
-        //sleep();
-
-        heart_beat = (heart_beat + 1) & eStatus_HeartBeat;
-        byte  prevSREG = SREG;
-        cli();
-        i2c_Set_Reg(eI2cReg_Status, (i2c_Get_Reg(eI2cReg_Status) & ~(eStatus_HeartBeat)) | heart_beat);
-        SREG = prevSREG;
-
         // Handle I2C commands
         byte  chg_mask = i2c_Get_Changed_Mask();
         if (chg_mask)
@@ -910,40 +943,8 @@ int __attribute__((noreturn)) main(void)
 #          ifndef ENABLE_DOUBLE_PULSE
             if (chg_mask & _BV(eI2cReg_Speed))          // Speed register
             {
-                byte  speed = i2c_Get_Reg(eI2cReg_Speed);
-                // Bit 7 is direction, remaining bits are half speed.
-                byte  dir = speed & 0x80;
-                speed <<= 1;
-
-                byte  prevSREG = SREG;
-                cli();
-
-                if (speed == 0)
-                {
-                    OCAInterrupt(OFF);
-                    AllOff();
-                    gCurrSpeed = 0;
-                    i2c_Set_Reg(eI2cReg_MotorCurrent, 0);
-                    i2c_Set_Reg(eI2cReg_Status, heart_beat);        // (zero non-hb bits)
-                    // Make sure the ADC readings don't stop, triggering one.
-                    ADCSR |= _BV(ADSC);
-                }
-                else
-                {
-                    // Speed has a limited range in both ends.
-                    if (speed < MIN_PWM)
-                        speed = MIN_PWM;
-                    if (speed > 255 - MIN_PWM)
-                        speed = 255 - MIN_PWM;
-
-                    if (dir == 0)
-                        GoFw(speed);
-                    else
-                        GoBw(speed);
-
-                    OCAInterrupt(ON);
-                }
-                SREG = prevSREG;
+                security_ctr = 0;
+                UpdateSpeed();
             }
 #          endif
         }
@@ -962,24 +963,39 @@ int __attribute__((noreturn)) main(void)
             val = (val < 100? 0 : val - 100);
             i2c_Set_Reg(eI2cReg_HBridgeVcc, (byte)val);
         }
-        // Process motor current readings. Average N samples.
-        if (gCurrSpeed && gAdc[eADC_MotorDriveCurrent])
+        if (gCurrSpeed)
         {
-            word  val = gAdc[eADC_MotorDriveCurrent];
-            // 5mOhm current sense resistor -> 5 mV/A
-            val = gCfg.adcVrefx10 * val;    // no overflow; val ~ Vadc * 1000
-            val = (val + 2) / 5;            // Motor current, in A x 10
-            byte  final = (byte)val;
-            motor_current_acc += final;
-            num_motor_current_samples++;
-            if (num_motor_current_samples >= 8)
+            // If no pooling from the master... slow down to a stop.
+            /*security_ctr++;
+            if (security_ctr > 50)
             {
-                final = (byte) ((motor_current_acc + 2) / 8);
-                if (final > 10)
-                    final -= 10;
-                i2c_Set_Reg(eI2cReg_MotorCurrent, final);
-                motor_current_acc = 0;
-                num_motor_current_samples = 0;
+                security_ctr = 0;
+                gCurrSpeed -= 2;
+                if (gCurrSpeed == 0)
+                {
+                    i2c_Set_Reg(eI2cReg_Speed, 0);
+                    UpdateSpeed();
+                }
+            }*/
+            // Process motor current readings. Average N samples.
+            if (gAdc[eADC_MotorDriveCurrent])
+            {
+                word  val = gAdc[eADC_MotorDriveCurrent];
+                // 5mOhm current sense resistor -> 5 mV/A
+                val = gCfg.adcVrefx10 * val;    // no overflow; val ~ Vadc * 1000
+                val = (val + 2) / 5;            // Motor current, in A x 10
+                byte  final = (byte)val;
+                motor_current_acc += final;
+                num_motor_current_samples++;
+                if (num_motor_current_samples >= 8)
+                {
+                    final = (byte) ((motor_current_acc + 2) / 8);
+                    if (final > 10)
+                        final -= 10;
+                    i2c_Set_Reg(eI2cReg_MotorCurrent, final);
+                    motor_current_acc = 0;
+                    num_motor_current_samples = 0;
+                }
             }
         }
         // Process temperature 1, "bridge temp".
