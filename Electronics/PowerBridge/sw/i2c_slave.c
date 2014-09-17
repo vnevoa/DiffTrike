@@ -223,7 +223,6 @@ ISR(USI_START_VECTOR)
 
     // Wait for the start condition to complete. We're in start condition while
     // SCL is high and SDA is low.
-    // This can take 5us (half I2C clock period @ 100KHz).
     byte  ctr = 5000 / 125;
     while (ctr &&
         ((PIN_USI & _BV(PIN_USI_SCL)) != 0) &&      // SCL is high
