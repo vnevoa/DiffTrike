@@ -48,15 +48,16 @@ class I2CMotorBridge():
 		self.busy = False	# microprocessor busy
 		self.alarm_I = False	# overcurrent alarm
 		self.alarm_T = False	# overtemperature alarm
+		self.i2c_ops = 0	# i/o total count
 		self.blockings = 0	# i/o fail count
 		self.I = 0.0		# current Motoring current :)
 		self.T = 0.0		# current Bridge temperature
 		self.mT = 0.0		# current Motor temperature
 		self.V = 0.0		# current Battery voltage
 		self.power = 0.0	# desired power from application
+		self.last_pwm = 0	# last effectively written PWM value
 		self.device = i2c_lib.I2CSlave(name, filename, address)
 		self.ongoing = False	# i/o thread lifespan control
-		self.heartbeat = 0	# token to check for resets
 		self.reset = False	# did the bridge reset?
 		self.resets = 0		# how many times did the bridge reset?
 		self.name = name	# friendly name
@@ -87,7 +88,7 @@ class I2CMotorBridge():
 	def ioPump(self):
 
 		t0 = time.time()
-		ops = 0
+		self.i2c_ops = 0
 		busy = 0
 		clip = 0
 		temp = 0
@@ -97,11 +98,11 @@ class I2CMotorBridge():
 
 		while self.ongoing:
 
-			ops += 1
 
 			# GET status:
 			try:
 				self.refreshStatus()
+				self.blockings = 0
 				if self.busy: busy += 1
 				if self.alarm_I: clip += 1
 				if self.alarm_T: temp += 1
@@ -110,53 +111,53 @@ class I2CMotorBridge():
 				if self.V < min_V: min_V = self.V
 			except:
 				self.blockings += 1
+			# count all read attempts
+			self.i2c_ops += 1
 
 			# SET behavior:
 			try:
 				self.writePower()
+				self.blockings = 0
 			except:
 				self.blockings += 1
+			# count all write attempts
+			self.i2c_ops += 1
 
 			# PRINT cycle:
-			if False:
-			#if self.debug:
+			if self.debug:
 				t1 = time.time()
 				if ((t1 - t0) * 1000) > 1000:
 					t0 = t1
-					line = "%s: \n\tops/sec = %d" % (self.device.getId(), ops)
-					line += " \tpower = %d%%" % (self.power * 100.0)
-					line += " \tmax curr = %0.1f A" % max_I
-					line += " \tmin volt = %0.1f V" % min_V
-					if clip: line += " \tclip = %d" % clip
-					if temp: line += " \tt_lim = %d" % temp
-					if busy: line += " \tBUSY = %d" % busy
-					if self.blockings: line += " \tGLITCHES = %d" % self.blockings
-					#if self.resets: line += " \tRESETS = %d" % self.resets
+					line = "%s:\n  %d ios;  %3.3f%% fail;" % (self.device.getId(), self.i2c_ops, 100.0*self.blockings/self.i2c_ops)
+					line += "  pwm = %d%%;" % (self.power * 100.0)
+					line += "  max curr = %2.1f A;" % max_I
+					line += "  min volt = %2.1f V;" % min_V
+					if clip: line += "  CLIP = %d;" % clip
+					if self.resets: line += "  RESETS = %d;" % self.resets
 					print line + "\n"
-					ops = 0
-					self.blockings = 0
-					busy = 0
 					clip = 0
-					temp = 0
 					self.resets = 0
 					max_I = 0.0
 					min_V = 100.0
 
 			# SLEEP:
-			time.sleep(0.100) # 100ms -> 10 Hz
+			time.sleep(0.050) # 50ms -> 20 loops per second
+			# exit if we fail I/O for 0.1s (10 = 5 R + 5 W)
+			#if self.blockings > 10 :
+			#	self.ongoing = False
+
 
 
 	def refreshStatus(self):
 
 		(a, b, c, d, e, f, g, h) = self.getRawData()
+		#print "%s %2x %2x %2x %2x %2x %2x %2x %2x" % (self.name, a, b, c, d, e, f, g, h)
+		if h != 26: # counts as a glitch
+			raise Exception("I2C garbage!")
+		# bridge forgot my order?
+		self.reset = (c != self.last_pwm)
 		# b = REG_STATUS
-		self.heartbeat += 1
-		if self.heartbeat > 15 : self.heartbeat = 0
-		#print "HB=%d " % (b & 0x0f)
-		self.reset = ((b & 0x0F) != self.heartbeat) # heartbeat off sync => bridge was reset
 		self.alarm_I = b & 0x10  # b4: current limited
-		self.alarm_T = b & 0x20  # b5: temperature limited
-		self.busy = b & 0x40     # b6: microprocessor busy
 		# d = REG_BRIDGETEMP
 		self.T = (255.0 - d) # ???
 		# e = REG_MOTORTEMP
@@ -196,29 +197,15 @@ class I2CMotorBridge():
 		return struct.unpack('BBBBBBBB', data) # dump all of them.
 
 
-	def waitBusy(self):
-		busy = True
-		max_retries = 100
-		t0 = time.time()
-		i = 0
-		while busy and i < max_retries:
-			self.device.seek(REG_STATUS)
-			(status,) = struct.unpack('B', self.device.read(1))
-			busy = status & 0x40
-			i += 1
-			if status != 0:
-				time.sleep(0.001)
-			#	print "status=%x busy=%d" % (status, busy)
-		t1 = time.time()
-		return 1000 * (t1-t0)
-
 	def writePower(self):
-		busy_time = 0.0
-		pwm = int(abs(self.power) * MAX_PWM)
-		if self.power < 0 : pwm |= 0x80 # reverse direction
-		self.device.write(REG_PWM, pwm)
-		#busy_time = self.waitBusy()
-		#print "wrote power=%0.2f pwm=%d" % (self.power, pwm)
+		# if the IO pump stops, throw the towel.
+		if not self.ongoing : 
+			raise Exception("No I/O pump!")
+		self.last_pwm = int(abs(self.power) * MAX_PWM)
+		if self.power < 0 : self.last_pwm |= 0x80 # reverse direction
+		inv = int(0xFF & ~self.last_pwm) # binary complement as check
+		self.device.write(REG_PWM, inv, self.last_pwm)
+		#print "wrote power=%1.2f inv=0x%x pwm=0x%x" % (self.power, inv, self.last_pwm)
 
 
 # This is a simple test routine that only runs if this module is 
@@ -240,12 +227,13 @@ if __name__ == '__main__':
                         #print "Setting power = %d%%" % (100 * i/MAX_PWM)
                         if mLok: mL.setPower(i/MAX_PWM)
                         if mRok: mR.setPower(i/MAX_PWM)
-                        if mLok: print "LEFT  P %3d%%, B.T %3d, M.T %3d, I %2.1f A, U %2.1f V" % (mL.power*100, mL.getTemperature(), mL.getMotorTemperature(), mL.getCurrent(), mL.getVoltage())
-                        if mRok: print "RIGHT P %3d%%, B.T %3d, M.T %3d, I %2.1f A, U %2.1f V" % (mR.power*100, mR.getTemperature(), mR.getMotorTemperature(), mR.getCurrent(), mR.getVoltage())
-                        time.sleep(0.1)
+                        #if mLok: print "LEFT  P %3d%%, B.T %3d, M.T %3d, I %2.1f A, U %2.1f V" % (mL.power*100, mL.getTemperature(), mL.getMotorTemperature(), mL.getCurrent(), mL.getVoltage())
+                        #if mRok: print "RIGHT P %3d%%, B.T %3d, M.T %3d, I %2.1f A, U %2.1f V" % (mR.power*100, mR.getTemperature(), mR.getMotorTemperature(), mR.getCurrent(), mR.getVoltage())
+                        time.sleep(1)
                         if i == MAX_PWM : time.sleep(4.5)
                 print ""
                 print ""
 
-	if not m1ok and not m2ok:
+
+	if not mLok and not mRok:
 		print "no motors found."
