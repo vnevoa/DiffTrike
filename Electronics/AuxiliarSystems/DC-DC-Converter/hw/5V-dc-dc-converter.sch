@@ -1,5 +1,5 @@
-EESchema Schematic File Version 2  date 17.9.2014 3:12:35
-LIBS:power,5V-dc-dc-converter.cache
+EESchema Schematic File Version 2  date 17.9.2014 3:22:59
+LIBS:power,device,.\5V-dc-dc-converter.cache
 EELAYER 24  0
 EELAYER END
 $Descr A4 11700 8267
@@ -13,8 +13,8 @@ Comment2 ""
 Comment3 ""
 Comment4 ""
 $EndDescr
-Text Notes 3000 1600 0    98   ~ 24
-5V rail DC-DC converter
+Text Notes 3000 1600 0    87   ~ 21
+DC-DC converter 5V upto 3A output
 Text Notes 7550 7525 0    47   ~ 0
 20-30V to 5V DC-DC switching converter
 Text Notes 10700 7650 0    47   ~ 0
