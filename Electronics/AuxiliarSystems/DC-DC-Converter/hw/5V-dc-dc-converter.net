@@ -1,0 +1,100 @@
+# EESchema Netlist Version 1.1 created  17.9.2014 3:12:27
+(
+ ( /5418EB41 $noname  R2 10K {Lib=RX}
+  (    1 N-000001 )
+  (    2 N-000002 )
+ )
+ ( /4D2F8F0D $noname  C3 100nF {Lib=CX}
+  (    1 N-000001 )
+  (    2 GND )
+ )
+ ( /4D2BC149 $noname  J1 Vin {Lib=CONN_2}
+  (    1 GND )
+  (    2 N-000005 )
+ )
+ ( /4D2BC140 $noname  J2 Vout {Lib=CONN_2}
+  (    1 GND )
+  (    2 N-000001 )
+ )
+ ( /4D2BC11F $noname  L1 100uH {Lib=LX}
+  (    1 N-000004 )
+  (    2 N-000001 )
+ )
+ ( /4D2BBC19 $noname  R1 3K3 {Lib=RX}
+  (    1 N-000002 )
+  (    2 GND )
+ )
+ ( /4D2BBBB3 $noname  D1 1N5822 {Lib=DIODE_SCHOTTKY}
+  (    1 GND )
+  (    2 N-000004 )
+ )
+ ( /4D2BBB91 $noname  C2 1000uF {Lib=CX}
+  (    1 N-000001 )
+  (    2 GND )
+ )
+ ( /4D2BBB89 $noname  C1 100uF {Lib=CX}
+  (    1 N-000005 )
+  (    2 GND )
+ )
+ ( /4D2BBB60 $noname  U1 LM2576ADJ {Lib=LM257X}
+  (    1 N-000005 )
+  (    2 N-000004 )
+  (    3 GND )
+  (    4 N-000002 )
+  (    5 GND )
+ )
+)
+*
+{ Allowed footprints by component:
+$component C3
+ SM*
+ C?
+ C1-1
+$endlist
+$component D1
+ D?
+ S*
+$endlist
+$component C2
+ SM*
+ C?
+ C1-1
+$endlist
+$component C1
+ SM*
+ C?
+ C1-1
+$endlist
+$endfootprintlist
+}
+{ Pin List by Nets
+Net 1 "" ""
+ L1 2
+ R2 1
+ J2 2
+ C3 1
+ C2 1
+Net 2 "" ""
+ R1 1
+ U1 4
+ R2 2
+Net 3 "GND" "GND"
+ U1 3
+ U1 5
+ C2 2
+ C3 2
+ D1 1
+ J1 1
+ J2 1
+ C1 2
+ R1 2
+Net 4 "" ""
+ L1 1
+ D1 2
+ U1 2
+Net 5 "" ""
+ J1 2
+ U1 1
+ C1 1
+}
+#End
