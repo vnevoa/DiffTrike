@@ -117,12 +117,6 @@ class Telemetry():
 		self.fresh = 0
 		return (self.o.t_in, self.o.t_proc, self.o.t_out, self.o.t_cycl)
 
-	def getAccel(self):
-		return (self.i.accX, self.i.accY)
-
-	def getGps(self):
-		return (self.i.gpsVld, self.i.gpsSpd, self.i.gpsHdng)
-
 
 class DummyTelemetry():
 	"""creates dummy data for use in testing."""
@@ -157,12 +151,6 @@ class DummyTelemetry():
 	def getTimes(self):
 		self.fresh = 0
 		return (self.o.t_in, self.o.t_proc, self.o.t_out, self.o.t_cycl)
-
-	def getAccel(self):
-		return (self.i.accX, self.i.accY)
-
-	def getGps(self):
-		return (self.i.gpsVld, self.i.gpsSpd, self.i.gpsHdng)
 
 
 class Histogram():
