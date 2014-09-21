@@ -51,6 +51,16 @@ def getstruct():
 	#print "Send ", len(inp), "+", len(outp), "=", len(data)
 	return data
 
+# callback for the telemetry server
+def setstruct(remote):
+	""" Serializes current input and output data and makes them available for telemetry, for example. """
+	if len(remote) == 12 : 
+		r.deserialize(remote)
+	else:
+		print "L=" + str(len(remote))
+
+	#print "Recv ", len(inp), "+", len(outp), "=", len(data)
+
 # "Application alive" LED blinker
 def blinkled():
 	""" Blinkled function: blinks the red LED """
@@ -75,6 +85,7 @@ t0 = time.time()
 ongoing = True
 i = sb_input.inputData()
 o = sb_output.outputData()
+r = sb_input.remoteData()
 sync = thread.allocate_lock()
 
 # register termination trap:
@@ -106,7 +117,7 @@ rightLed = open('/dev/null','w',0)
 
 # initialize telemetry
 t = sb_telemetry.MyTcpServer()
-t.start("192.168.5.202", 11000, getstruct)
+t.start("192.168.5.202", 11000, getstruct, setstruct)
 
 t1 = time.time()
 print "Init=%0.3fs. Entering control loop." % (t1 - t0)
@@ -126,16 +137,19 @@ while ongoing:
 
 	# read joystick:
 	i.failed_j = False
-	pygame.event.pump() # this is essential for joystick updates.
-	try:
-		i.jsB1, i.jsB2 = stick.getButtons(2)
-		if i.jsB1: # button 1 as dead man's switch.
-			i.jsX, i.jsY = stick.getXY()
-		else:
-			i.jsX = i.jsY = 0.0
-	except:
-		i.failed_j = True
-		i.jsX = i.jsY = 0.0
+	i.jsX = i.jsY = 0.0
+	if r.on:
+		i.jsX = r.jsX
+		i.jsY = r.jsY
+		print "remote " + str(i.jsX) + ", " + str(i.jsY)
+	else:
+		pygame.event.pump() # this is essential for joystick updates.
+		try:
+			i.jsB1, i.jsB2 = stick.getButtons(2)
+			if i.jsB1: # button 1 as dead man's switch.
+				i.jsX, i.jsY = stick.getXY()
+		except:
+			i.failed_j = True
 
 	# read left bridge:
 	i.failed_l = False
@@ -167,10 +181,10 @@ while ongoing:
 	# process data
 	############################
 
-	# Apply exponential filter to joystick axes.
-	x = abs(i.jsX) ** j_exp_x
+	# Reduce sensitivity of joystick axes.
+	x = abs(i.jsX) / 3.0
 	if (i.jsX < 0.0): x = -x
-	y = abs(i.jsY) ** j_exp_y
+	y = abs(i.jsY) / 1.5
 	if (i.jsY > 0.0): y = -y     # Y comes inverted from joystick.
 
 	# Left: simple mapping...

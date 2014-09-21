@@ -24,28 +24,35 @@
 import SocketServer
 import thread, struct
 
-datafunc = None
+getfunc = setfunc = None
 
 class MyTCPHandler(SocketServer.BaseRequestHandler):
 
 	def handle(self):
-		global datafunc
+		global getfunc
+		global setfunc
 		print "Got new IP client."
 		try:
 			ok = True
 			while ok:
-				payload = datafunc()
+				# SEND status
+				payload = getfunc()
 				header = struct.pack("H", len(payload))
 				ok = self.request.send(header + payload)
+				# RECV instructions
+				remdata = self.request.recv(12)  # TODO: remote.getlen() or something
+				setfunc(remdata)
 		except:
 			print "Lost IP client!"
 
 
 class MyTcpServer():
 
-	def start(self, host, port, func):
-		global datafunc
-		datafunc = func
+	def start(self, host, port, getp, setp):
+		global getfunc
+		getfunc = getp
+		global setfunc
+		setfunc = setp
     		self.server = SocketServer.TCPServer((host, port), MyTCPHandler)
 		thread.start_new_thread(self.server.serve_forever, ())
 

@@ -126,15 +126,75 @@ class inputData():
 
 		return "jsX; jsY; jsB1; jsB2; jsHatX; jsHatY; failed; failed_j; failed_l; motLC; brgLT; batLV; motLCclip; failed_r; motRC; brgRT; batRV; motRCclip;"
 
+
+class remoteData():
+	def __init__(self):
+
+		""" Holds remote control data """
+
+		self.on = False
+
+		# joystick data:
+		self.jsX = 0.0 # Joystick X coordenate [-1..1].
+		self.jsY = 0.0 # Joystick Y coordenate [-1..1].
+
+		self.seed = 0 # for random test data.
+
+
+	def randomize(self):
+		pass
+
+	def serialize(self):
+
+		""" grabs all the data fields and stuffs them into a string for network communications """
+
+		return struct.pack("?ff",
+		self.on, self.jsX, self.jsY)
+
+	def deserialize(self, stream):
+
+		""" grabs a binary string and explodes it into all the data fields """
+
+		(self.on, self.jsX, self.jsY) = \
+		struct.unpack("?ff", stream)
+
+	def log(self):
+
+		""" grabs all the data fields and returns them in a string """
+
+		return "{0:d}".format(self.on) + ";" + \
+		"{0:.2f}".format(self.jsX) + ";" + \
+		"{0:.2f}".format(self.jsY) + ";"
+
+	def logHeader(self):
+
+		""" returns the names of all the data fields """
+
+		return "on; jsX; jsY;"
+
 # This is a simple test routine that only runs if this module is 
 # called directly with "python sb_input.py"
 
 if __name__ == '__main__':
+
+	print "INPUT DATA"
+
 	i = inputData()
 	i.randomize()
 	a = i.serialize()
-	print len(a)
+	print "LEN input = " + str(len(a))
 	i.deserialize(a)
 	print i.logHeader()
 	print i.log()
+	
+	print "REMOTE DATA"
+
+	r = remoteData()
+	r.randomize()
+	a = r.serialize()
+	print "LEN remote = " + str(len(a))
+	r.deserialize(a)
+	print r.logHeader()
+	print r.log()
+
 

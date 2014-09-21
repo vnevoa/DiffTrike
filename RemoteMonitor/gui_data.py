@@ -50,6 +50,7 @@ class Telemetry():
 		self.fresh = 0
 		self.i = sb_input.inputData()
 		self.o = sb_output.outputData()
+		self.r = sb_input.remoteData()
 		self.a = 0
 		self.t = time.time()
 		self.blackout_histo = Histogram()
@@ -96,6 +97,8 @@ class Telemetry():
 					self.i.deserialize(packet[0:bytes_i])
 					self.o.deserialize(packet[bytes_i:bytes_i+bytes_o])
 					self.fresh = 1
+
+					self.sock.send(self.r.serialize())
 			except:
 				self.connected = 0
 				self.sock.close()
@@ -109,6 +112,14 @@ class Telemetry():
 
 	def getJoystick(self):
 		return (self.i.jsX, self.i.jsY)
+
+
+	def setRemote(self, state):
+		self.r.on = state
+
+	def setJoystick(self, x, y):
+		self.r.jsX = x
+		self.r.jsY = y
 
 	def getTorque(self):
 		return (self.o.l_trq, self.o.r_trq, self.i.motLC, self.i.motRC)
@@ -144,6 +155,13 @@ class DummyTelemetry():
 
 	def getJoystick(self):
 		return (self.i.jsX, self.i.jsY)
+
+	def setRemote(self, rem = False):
+		self.r.on = rem
+
+	def setJoystick(self, X, Y):
+		self.r.jsX = X
+		self.r.jsY = Y
 
 	def getTorque(self):
 		return (self.o.l_trq, self.o.r_trq, self.i.motLC, self.i.motRC)
