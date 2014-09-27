@@ -84,17 +84,27 @@ class outputData():
 
 		""" grabs all the data fields and returns them in a string """
 
-		return "{0:.3f}".format(self.tstamp) + ";" + "{0:.2f}".format(self.t_in) + ";" + "{0:.2f}".format(self.t_proc) + ";" + "{0:.2f}".format(self.t_out) + ";" + \
-		"{0:.2f}".format(self.l_trq) + ";" + "{0:.2f}".format(self.r_trq) + ";" + \
-		"{0:d}".format(self.failed) + ";" + "{0:d}".format(self.failed_r) + ";" + "{0:d}".format(self.failed_l) + ";" + \
-		"{0:d}".format(self.glitches_r) + ";" + "{0:d}".format(self.glitches_l) + ";" + \
-		"{0:d}".format(self.resets_r) + ";" + "{0:d}".format(self.resets_l) + ";"
-		
+		return "{0:.3f}".format(self.tstamp) + ";" + \
+		"{0:.2f}".format(self.t_in) + ";" + \
+		"{0:.2f}".format(self.t_proc) + ";" + \
+		"{0:.2f}".format(self.t_out) + ";" + \
+		"{0:d}".format(self.failed) + ";" + \
+\
+		"{0:.2f}".format(self.l_trq) + ";" + \
+		"{0:d}".format(self.failed_l) + ";" + \
+		"{0:d}".format(self.glitches_l) + ";" + \
+		"{0:d}".format(self.resets_l) + ";" + \
+\
+		"{0:.2f}".format(self.r_trq) + ";" + \
+		"{0:d}".format(self.failed_r) + ";" + \
+		"{0:d}".format(self.glitches_r) + ";" + \
+		"{0:d}".format(self.resets_r) + ";"
+
 	def logHeader(self):
 
 		""" returns the names of all the data fields """
 
-		return "tstamp;t_in;t_proc;t_out;l_trq;r_trq;failed;failed_r;failed_l;glitches_r;glitches_l;resets_r;resets_l"
+		return "tstamp; t_in; t_proc; t_out; failed; l_trq; failed_l; glitches_l; resets_l; r_trq; failed_r; glitches_r; resets_r;"
 
 
 # This is a simple test routine that only runs if this module is 
