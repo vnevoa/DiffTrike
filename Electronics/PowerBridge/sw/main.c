@@ -158,6 +158,9 @@ enum {
     eCmd_SetI2cAddr,
     eCmd_SetVref,
     eCmd_GetVref,
+    // Special bitmask config word, when cmd is written with b7 = 1
+    eCmd_DisableDissipativeBreak = 0x80,
+    eCmd_EnableDissipativeBreak = 0x81,
     // Debug commands
     eCmd_DoDoublePulseTest,
 };
@@ -748,7 +751,7 @@ int __attribute__((noreturn)) main(void)
         {
             if (chg_mask & _BV(eI2cReg_Command))        // Command register
             {
-                byte  cmdVal = 0;
+                byte  cmdVal = 0x80;
                 byte  cmd = i2c_Get_Reg(eI2cReg_Command);
 
                 switch (cmd)
@@ -852,13 +855,26 @@ int __attribute__((noreturn)) main(void)
                     }
 #                  endif
 
+                    default :
+                    {
+                        static byte  sOldSpeed = 0;
 
-                    /*default :
-                        if ((cmd & 0xF0) == eCmd_SetPwmPres)
+                        cmdVal = cmd;
+                        // b7: 1, reserved
+                        // b6..b2: 0, reserved
+                        // b0: 0 = motoring/freewheeling, 1 = dissipative braking
+                        if (cmd == eCmd_EnableDissipativeBreak)
                         {
-                            cmdVal = cmd & 0x0F;
-                            TCCR1B = (TCCR1B & 0xF0) | cmdVal;
-                        }*/
+                            sOldSpeed = i2c_Get_Reg(eI2cReg_Speed);
+                            i2c_Set_Reg(eI2cReg_Speed, 0);
+                            DissipativeBreak();
+                        }
+                        else if (cmd == eCmd_DisableDissipativeBreak)
+                        {
+                            i2c_Set_Reg(eI2cReg_Speed, sOldSpeed);
+                            UpdateSpeed();
+                        }
+                    }
                 }
 
                 i2c_Set_Reg(eI2cReg_Command, cmdVal);
