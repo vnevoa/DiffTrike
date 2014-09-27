@@ -532,8 +532,12 @@ static void ports_init (void)
     // and therefore it must not assume any initial state, and must not change
     // things it doesn't use.
 
-    // H-bridge pins as outputs, starting all off.
-    PORTB |=  (eHB1_L | eHB2_L);    // bottom MOSFETs off (inverter MOSFET driver)
+    PORTB |= 0
+        // H-bridge pins as outputs, starting all off.
+            | (eHB1_L | eHB2_L)    // bottom MOSFETs off (inverter MOSFET driver)
+        // Enable pull-ups on unused pins, to have stable inputs.
+            | ePB6
+        ;
         // At this point, the pull-ups are ON and we're already actively turning
         // OFF the bottom MOSFETs. Nevertheless, the bottom drivers keep the MOSFETs
         // off when not driven.
@@ -545,20 +549,19 @@ static void ports_init (void)
 
     AllOff();  // inits some state
 
-    // Enable pull-up for base i2c address selector.
-    PORTA |= eI2CaddrSel;
+    PORTA |= 0
+        // Enable pull-up for base i2c address selector.
+            | eI2CaddrSel       // (currently unused)
+        // Enable pull-up on OCA (Over Current Alarm) pin.
+            | eOCA
+        // Enable pull-ups on unused pins, to have stable inputs.
+            | ePA3
+        ;
     // LED pin as output.
     DDRA  |= eLED;
 
-    // Enable pull-up on OCA (Over Current Alarm) pin.
-    PORTA |= eOCA;
-    // Enable pin change interrupt to catch the OverCurrent Alarm.
-    // Need to disable the VCOMP for the interrupt to trigger on OCA's pin.
+    // Need to disable the VCOMP for the pin change interrupt to trigger on OCA's pin.
     ACSR |= _BV(ACD);
-
-    // Enable pull-ups on unused pins, to have stable inputs.
-    PORTA |= ePA3;
-    PORTB |= ePB6;
 }
 
 
