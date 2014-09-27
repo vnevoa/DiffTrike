@@ -197,6 +197,25 @@ static inline void OCAInterrupt (bool on)
 }
 
 
+static inline void SetWatchdog (bool on)
+{
+    if (on)
+    {
+        WDTCR = _BV(WDE) |      // enable watchdog
+                _BV(WDP2)       // ~255ms max reset period
+                ;
+        asm volatile("wdr");    // watchdog reset
+    }
+    else
+    {
+        // NOTE: interrupts must be disabled, these 2 writes must be
+        //       done atomically and withtin 4 clock cycles.
+        WDTCR = _BV(WDCE) | _BV(WDE);
+        WDTCR = 0;
+    }
+}
+
+
 static inline void TopHB1 (bool on)
 {
     if (on)
@@ -651,6 +670,7 @@ static void UpdateSpeed (void)
 
     if (speed == 0)
     {
+        SetWatchdog(OFF);
         OCAInterrupt(OFF);
         AllOff();
         gCurrSpeed = 0;
@@ -673,6 +693,7 @@ static void UpdateSpeed (void)
             GoBw(speed);
 
         OCAInterrupt(ON);
+        SetWatchdog(ON);
     }
     SREG = prevSREG;
 }
