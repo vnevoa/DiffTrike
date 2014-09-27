@@ -53,9 +53,6 @@
 // Code to write the params to EEPROM is not always needed so we remove it for space.
 #define DISABLE_EEPROM_WRITE
 
-// Enable the tick if you need a regular timming tick
-#define DISABLE_TIMER_TICK
-
 // Auto config for double pulse test mode.
 #ifdef ENABLE_DOUBLE_PULSE
 #   define DISABLE_ADC
@@ -136,10 +133,10 @@ enum {
     eI2cReg_HBridgeTemp     = 3,    //  W  controller temperature
     // raw diode reading
     eI2cReg_MotorTemp       = 4,    //  R  motor temperature
-    // Motor driving current (I), x10 in A
+    // Motor driving current (I), x10 in A (0-25.5A)
     //  I = MotorCurrent / 10
     eI2cReg_MotorCurrent    = 5,    //  R  motor current
-    // Controller's power supply voltage (Vcc), minus 10V x10
+    // Controller's power supply voltage (Vcc), minus 10V x10 (10-29.6V)
     //  Vcc = HBridgeVcc / 10 + 10
     eI2cReg_HBridgeVcc      = 6,    //  R  controller Vcc
     eI2cReg_SwRevision      = 7,    //  R  sw revision
@@ -163,11 +160,6 @@ enum {
     eCmd_GetVref,
     // Debug commands
     eCmd_DoDoublePulseTest,
-    eCmd_GetPinA,
-    eCmd_GetPinB,
-    eCmd_SetPwmFreq8KHz,
-    eCmd_SetPwmFreq15KHz,
-    eCmd_SetPwmPres = 0xF0,
 };
 
 
@@ -192,15 +184,6 @@ static inline void sleep (void)
 {
     asm volatile("sleep");
 }
-
-
-/*static void delayMs (unsigned short ms)
-{
-#  ifndef SIMULATOR
-    while (ms--)
-        _delay_ms(1);
-#  endif
-}*/
 
 
 static inline void OCAInterrupt (bool on)
@@ -438,11 +421,6 @@ ISR(IO_PINS_vect)
 #endif
 
 
-#ifndef DISABLE_TIMER_TICK
-EMPTY_INTERRUPT (TIMER0_OVF0_vect)
-#endif
-
-
 #ifndef DISABLE_ADC
 ISR(ADC_vect)
 {
@@ -496,29 +474,6 @@ ISR(ADC_vect)
 #endif
 
 
-/** 
- * Timer 0 initialisation
- */
-static void start_timer_0 (void)
-{
-# ifndef DISABLE_TIMER_TICK
-#   if F_CPU==4000000
-    // TIMER0: Normal 8-bit Mode 0
-    // Set Clock prescaler to count at F_CPU/256 -> 4MHz/256/256 ~ 61Hz -> 16.38ms
-    TCCR0 = _BV(CS02);
-
-#   elif F_CPU==8000000
-    // TIMER0: Normal 8-bit Mode 0
-    // Set Clock prescaler to count at F_CPU/1024 -> 8MHz/1024/256 ~ 30.5Hz -> 32.77ms
-    TCCR0 = _BV(CS02) | _BV(CS00);
-#   endif
-
-    // Enable OVF interrupt
-    TIMSK |= _BV(TOIE0);
-# endif
-}
-
-
 /**
  * ADC initialisation
  */
@@ -532,18 +487,10 @@ static void adc_init (void)
             | eADC_MotorDriveCurrent     // Isense
             ;
 
-#   if F_CPU==4000000
-    // Fadc = 125KHz (adc-prescaler = 32 -> 4MHz / 32 = 125KHz -> 8us)
-    ADCSR |= _BV(ADPS2) | _BV(ADPS0);
-    // Fadc = 250KHz (adc-prescaler = 16 -> 4MHz / 16 = 250KHz -> 4us)
-    //ADCSR |= _BV(ADPS2);
-
-#   elif F_CPU==8000000
     // Fadc = 125KHz (adc-prescaler = 64 -> 8MHz / 64 = 125KHz -> 8us)
     //ADCSR |= _BV(ADPS2) | _BV(ADPS1);
     // Fadc = 250KHz (adc-prescaler = 32 -> 8MHz / 32 = 250KHz -> 4us)
     ADCSR |= _BV(ADPS2) | _BV(ADPS0);
-#   endif
 
     // Enable ADC conversion complete interrupt.
     ADCSR |= _BV(ADIE);
@@ -602,18 +549,11 @@ static void pwm_init (void)
     TCCR1A = 0;
     // Overflow happens at (sysclock / prescaler / (OCRC + 1))
     // Prescaler: 1: /1, 2: /2, 3: /4, 4: /8
-#  if F_CPU==4000000
-    // Ctr overflow freq: 4MHz / 1 / (255 + 1) = 15.625KHz  (1)
-    //                    4MHz / 2 / (255 + 1) =  7.813KHz  (2)
-    //                    4MHz / 2 / (249 + 1) =  8.000KHz  (2)
-    TCCR1B = (TCCR1B & 0xF0) | 2;
-#  elif F_CPU==8000000
     // Ctr overflow freq: 8MHz / 2 / (255 + 1) = 15.625KHz  (2)
     //                    8MHz / 4 / (255 + 1) =  7.813KHz  (3)
     //                    8MHz / 4 / (249 + 1) =  8.000KHz  (3)
     //                    8MHz / 4 / (199 + 1) = 10.000KHz  (3)
     TCCR1B = (TCCR1B & 0xF0) | 3;
-#  endif
     OCR1C = 0xFF;
 }
 
@@ -654,9 +594,9 @@ static byte CalcChecksum (void* ptr, byte size)
 #define EEPROM_MAGIC_NUMBER  0x69
 
 
+#ifndef DISABLE_EEPROM_WRITE
 static void SaveCfgToEeprom (void)
 {
-#  ifndef DISABLE_EEPROM_WRITE
     byte  prevSREG = SREG;
     cli();
     eeprom_busy_wait();
@@ -667,8 +607,8 @@ static void SaveCfgToEeprom (void)
     eeprom_write_byte((byte*)(EepromCfgAddr + 1 + sizeof(gCfg)),
                       CalcChecksum(&gCfg, sizeof(gCfg)));
     SREG = prevSREG;
-#  endif
 }
+#endif
 
 
 // Read config data from the EEPROM.
@@ -692,7 +632,9 @@ static byte ReadCfgFromEeprom (void)
     gCfg.i2cAddr = 0x20;
     gCfg.adcVrefx10 = 28;
 
+#  ifndef DISABLE_EEPROM_WRITE
     SaveCfgToEeprom();
+#  endif
     return 0;
 }
 
@@ -746,36 +688,17 @@ int __attribute__((noreturn)) main(void)
     ports_init();
 
     // Load config params from EEPROM
-    //byte  i =
-   (void)ReadCfgFromEeprom();
+    (void)ReadCfgFromEeprom();
 
     pwm_init();
     // Init i2c slave interface (do it while interrupts are disabled)
     twi_init();
     adc_init();
-    // Initialize TIMER0 to be used as timetick
-    start_timer_0();
-
-    // Initial short LED blink, or long if using the default config.
-#  ifndef SIMULATOR
-    /*for (i = i? 2 : 8; i; i--)
-    {
-        PortToggle(A, eLED);
-        delayMs(250);
-    }*/
-#  endif
 
 #  ifdef SIMULATOR
     i = MIN_PWM;
     i2c_Set_Reg(eI2cReg_Speed, i);
     GoFw(i);
-    delayMs(1);     // keep gcc happy :)
-#  endif
-
-#  ifndef DISABLE_TIMER_TICK
-    set_sleep_mode(SLEEP_MODE_IDLE);
-    // Sleep mode always ON
-    MCUCR |= _BV(SE);
 #  endif
 
 #  ifdef ENABLE_DOUBLE_PULSE
@@ -792,8 +715,6 @@ int __attribute__((noreturn)) main(void)
     word  motor_current_acc = 0;
     byte  num_motor_current_samples = 0;
 #  endif
-    //byte  heart_beat = 0;
-    byte  security_ctr = 0;
 
     while(1)
     {
@@ -907,27 +828,6 @@ int __attribute__((noreturn)) main(void)
                     }
 #                  endif
 
-                    /*case eCmd_SetPwmFreq8KHz :
-                        pwm_SetFrequency(8000);
-                        break;
-                    case eCmd_SetPwmFreq15KHz :
-                        pwm_SetFrequency(15000);
-                        break;*/
-
-                    /*case eCmd_GetPinA :
-                        cmdVal = PINA;
-                        break;
-                    case eCmd_GetPinB :
-                        cmdVal = PINB;
-                        break;
-                    case eCmd_GetAdc0 :
-                    case eCmd_GetAdc1 :
-                    case eCmd_GetAdc2 :
-                    case eCmd_GetAdc3 :
-                    case eCmd_GetAdc4 :
-                    case eCmd_GetAdc5 :
-                        cmdVal = gAdc[(cmd - eCmd_GetAdc0) & 0x07] >> 2;
-                        break;*/
 
                     /*default :
                         if ((cmd & 0xF0) == eCmd_SetPwmPres)
@@ -943,7 +843,6 @@ int __attribute__((noreturn)) main(void)
 #          ifndef ENABLE_DOUBLE_PULSE
             if (chg_mask & _BV(eI2cReg_Speed))          // Speed register
             {
-                security_ctr = 0;
                 UpdateSpeed();
             }
 #          endif
@@ -965,18 +864,6 @@ int __attribute__((noreturn)) main(void)
         }
         if (gCurrSpeed)
         {
-            // If no pooling from the master... slow down to a stop.
-            /*security_ctr++;
-            if (security_ctr > 50)
-            {
-                security_ctr = 0;
-                gCurrSpeed -= 2;
-                if (gCurrSpeed == 0)
-                {
-                    i2c_Set_Reg(eI2cReg_Speed, 0);
-                    UpdateSpeed();
-                }
-            }*/
             // Process motor current readings. Average N samples.
             if (gAdc[eADC_MotorDriveCurrent])
             {
