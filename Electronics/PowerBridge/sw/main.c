@@ -867,6 +867,7 @@ int __attribute__((noreturn)) main(void)
                         {
                             sOldSpeed = i2c_Get_Reg(eI2cReg_Speed);
                             i2c_Set_Reg(eI2cReg_Speed, 0);
+                            UpdateSpeed();
                             DissipativeBreak();
                         }
                         else if (cmd == eCmd_DisableDissipativeBreak)
