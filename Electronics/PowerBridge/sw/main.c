@@ -30,7 +30,7 @@
 
 
 // This value can be read from one of the I2C registers
-#define FW_VERSION  26
+#define FW_VERSION  27
 
 
 /// ---- Compilation flags BEGIN ------------
