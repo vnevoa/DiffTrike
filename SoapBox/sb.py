@@ -53,7 +53,7 @@ def getstruct():
 
 # callback for the telemetry server
 def setstruct(remote):
-	""" Serializes current input and output data and makes them available for telemetry, for example. """
+	""" Deserializes remote telemetry data and makes them available for local input. """
 	if len(remote) == 12 : 
 		r.deserialize(remote)
 	else:
@@ -103,7 +103,6 @@ sync.acquire()
 ######################################
 
 # connect to the usb joystick:
-j_exp_x = j_exp_y = 2.0 # dampening exponent for axis readings.
 pygame.init()
 stick = sb_joystick.Joystick(0)
 
@@ -137,19 +136,19 @@ while ongoing:
 
 	# read joystick:
 	i.failed_j = False
-	i.jsX = i.jsY = 0.0
-	if r.on:
-		i.jsX = r.jsX
-		i.jsY = r.jsY
-		print "remote " + str(i.jsX) + ", " + str(i.jsY)
-	else:
-		pygame.event.pump() # this is essential for joystick updates.
-		try:
-			i.jsB1, i.jsB2 = stick.getButtons(2)
-			if i.jsB1: # button 1 as dead man's switch.
-				i.jsX, i.jsY = stick.getXY()
-		except:
-			i.failed_j = True
+	i.jsX = i.jsY = 0.0 # when no valid joystick coordenates, brake.
+	pygame.event.pump() # this is essential for joystick updates.
+	try:
+		i.jsB1, i.jsB2 = stick.getButtons(2)
+		if i.jsB1: # button 1 as dead man's switch; overrides remote control.
+			i.jsX, i.jsY = stick.getXY()
+		else:
+			if r.on: # allow remote control if nobody on js.
+				i.jsX = r.jsX
+				i.jsY = r.jsY
+				print "remote " + str(i.jsX) + ", " + str(i.jsY)
+	except:
+		i.failed_j = True
 
 	# read left bridge:
 	i.failed_l = False
@@ -181,11 +180,14 @@ while ongoing:
 	# process data
 	############################
 
-	# Reduce sensitivity of joystick axes.
-	x = abs(i.jsX) / 3.0
+	# Process joystick axes.
+
+	# Exponential dampening on lateral axis (too sensitive)
+	x = abs(i.jsX) ** 2
 	if (i.jsX < 0.0): x = -x
-	y = abs(i.jsY) / 1.5
-	if (i.jsY > 0.0): y = -y     # Y comes inverted from joystick.
+
+	# Invert longitudinal axis from joystick
+	y = -i.jsY
 
 	# Left: simple mapping...
 	o.l_trq = y + x 
