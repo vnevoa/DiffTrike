@@ -62,6 +62,7 @@ class I2CMotorBridge():
 		self.resets = 0		# how many times did the bridge reset?
 		self.name = name	# friendly name
 		self.debug = debug	# should I speak loudly?
+		self.shorted = False # are we short-circuiting the motor?
 
 		if self.test():
 			self.ongoing = True
@@ -93,6 +94,7 @@ class I2CMotorBridge():
 		clip = 0
 		temp = 0
 		self.resets = 0
+		self.shorts = 0
 		max_I = 0.0
 		min_V = 100.0
 
@@ -130,6 +132,8 @@ class I2CMotorBridge():
 					t0 = t1
 					line = "%s:\n  %d ios;  %3.3f%% fail;" % (self.device.getId(), self.i2c_ops, 100.0*self.blockings/self.i2c_ops)
 					line += "  pwm = %d%%;" % (self.power * 100.0)
+					if self.shorts > 0 :
+						line += " SCs = %d; " % self.shorts
 					line += "  max curr = %2.1f A;" % max_I
 					line += "  min volt = %2.1f V;" % min_V
 					if clip: line += "  CLIP = %d;" % clip
@@ -137,6 +141,7 @@ class I2CMotorBridge():
 					print line + "\n"
 					clip = 0
 					self.resets = 0
+					self.shorts = 0
 					max_I = 0.0
 					min_V = 100.0
 
@@ -152,7 +157,7 @@ class I2CMotorBridge():
 
 		(a, b, c, d, e, f, g, h) = self.getRawData()
 		#print "%s %2x %2x %2x %2x %2x %2x %2x %2x" % (self.name, a, b, c, d, e, f, g, h)
-		if h != 26: # counts as a glitch
+		if h != 27: # counts as a glitch
 			raise Exception("I2C garbage!")
 		# bridge forgot my order?
 		self.reset = (c != self.last_pwm)
@@ -201,11 +206,25 @@ class I2CMotorBridge():
 		# if the IO pump stops, throw the towel.
 		if not self.ongoing : 
 			raise Exception("No I/O pump!")
-		self.last_pwm = int(abs(self.power) * MAX_PWM)
-		if self.power < 0 : self.last_pwm |= 0x80 # reverse direction
-		inv = int(0xFF & ~self.last_pwm) # binary complement as check
-		self.device.write(REG_PWM, inv, self.last_pwm)
-		#print "wrote power=%1.2f inv=0x%x pwm=0x%x" % (self.power, inv, self.last_pwm)
+		if abs(self.power) > 0.08:
+			# if power > 8%, we are motoring:
+			self.last_pwm = int(abs(self.power) * MAX_PWM)
+			if self.shorted : 
+				self.device.write(REG_COMMAND, 0x7F, 0x80) # turn off braking
+				self.shorted = False
+			if self.power < 0 : self.last_pwm |= 0x80 # reverse direction
+			inv = int(0xFF & ~self.last_pwm) # binary complement as check
+			self.device.write(REG_PWM, inv, self.last_pwm)
+		else:
+			# if power < 8%, we are braking or curving:
+			# toggle short-circuiting = regenerative braking
+			if not self.shorted : 
+				self.device.write(REG_COMMAND, 0x7E, 0x81) # turn on braking -> motor is brake, heats up
+				self.shorted = True
+				self.shorts += 1
+			else:
+				self.device.write(REG_COMMAND, 0x7F, 0x80) # turn off braking -> motor is generator, heats up, battery charges
+				self.shorted = False
 
 
 # This is a simple test routine that only runs if this module is 
